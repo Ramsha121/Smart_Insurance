@@ -1,199 +1,202 @@
-# ===============================
-# SMART FITNESS INSURANCE APP
-# ===============================
+# =========================================
+# SMART FITNESS INSURANCE – STREAMLIT APP
+# =========================================
 
 import streamlit as st
 import pandas as pd
 import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
 import plotly.express as px
-from sklearn.preprocessing import LabelEncoder
-import warnings
-warnings.filterwarnings("ignore")
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+import tempfile
 
-# -------------------------------
+# -----------------------------------------
 # PAGE CONFIG
-# -------------------------------
+# -----------------------------------------
 st.set_page_config(
     page_title="Smart Fitness Insurance",
     page_icon="💙",
     layout="wide"
 )
 
-# -------------------------------
+# -----------------------------------------
 # CUSTOM THEME
-# -------------------------------
+# -----------------------------------------
 st.markdown("""
 <style>
 .big-title {font-size:40px; font-weight:700; color:#0f4c75;}
 .sub-title {font-size:18px; color:#3282b8;}
-.box {background:#fff; padding:20px; border-radius:15px;
-      box-shadow:0px 4px 12px rgba(0,0,0,0.08);}
+.card {
+    background:white;
+    padding:20px;
+    border-radius:15px;
+    box-shadow:0px 4px 12px rgba(0,0,0,0.1);
+}
 </style>
 """, unsafe_allow_html=True)
 
-# -------------------------------
-# LOAD DATA
-# -------------------------------
-df = pd.read_csv("fitness_claim_dataset.csv")
-df = df.dropna()
+# -----------------------------------------
+# LOAD & TRAIN MODEL (UNCHANGED IDEA)
+# -----------------------------------------
+@st.cache_data
+def load_model():
+    df = pd.read_csv("fitness_claim_dataset.csv").dropna()
 
-# Encode categorical columns
-categorical_cols = df.select_dtypes(include=['object']).columns.difference(['Name'])
-for col in categorical_cols:
-    df[col] = LabelEncoder().fit_transform(df[col])
+    cat_cols = df.select_dtypes(include='object').columns.difference(['Name'])
+    for col in cat_cols:
+        df[col] = LabelEncoder().fit_transform(df[col])
 
-# -------------------------------
-# FITNESS SCORE (ORIGINAL LOGIC PRESERVED)
-# -------------------------------
-df['Fitness Score'] = (
-    -0.15 * (df['Blood Pressure (Systolic)'] - 120) / 20 +
-    -0.15 * (df['Blood Pressure (Diastolic)'] - 80) / 10 +
-    -0.10 * (df['Heart Beats'] - 70) / 30 +
-    -0.15 * (df['BMI'] - 22) / 8 +
-    -0.10 * (df['Cholesterol'] - 200) / 100 +
-    0.20 * df['Steps Taken'] / 10000 +
-    0.15 * df['Active Minutes'] / 60 +
-    0.10 * (df['Sleep Duration'] - 7) / 2 +
-    0.15 * df['Sleep Quality'] / 10 +
-    0.20 * df['VO2 Max'] / 50 +
-    0.10 * df['Calories Burned'] / 2000 +
-    0.20 * df['SpO2 Levels'] / 100 +
-    -0.25 * df['Stress Levels'] / 10
-)
+    scaler = StandardScaler()
+    num_cols = df.select_dtypes(include=np.number).columns
+    df[num_cols] = scaler.fit_transform(df[num_cols])
 
-df['Fitness Score'] = (
-    (df['Fitness Score'] - df['Fitness Score'].min()) /
-    (df['Fitness Score'].max() - df['Fitness Score'].min())
-) * 100
+    df["Fitness Score"] = (
+        0.1*df['Blood Pressure (Systolic)'] +
+        0.1*df['Blood Pressure (Diastolic)'] +
+        0.15*df['Heart Beats'] +
+        0.15*df['BMI'] +
+        0.1*df['Cholesterol'] +
+        0.2*df['Steps Taken'] +
+        0.1*df['Active Minutes'] +
+        0.1*df['Sleep Duration'] +
+        0.05*df['Sleep Quality'] +
+        0.15*df['VO2 Max'] +
+        0.1*df['Calories Burned'] +
+        0.15*df['SpO2 Levels'] -
+        0.2*df['Stress Levels']
+    )
 
-# -------------------------------
-# CATEGORY, DISCOUNT, PLAN
-# -------------------------------
-def categorize_fitness(score):
+    df["Fitness Score"] = (df["Fitness Score"] - df["Fitness Score"].min()) / \
+                          (df["Fitness Score"].max() - df["Fitness Score"].min()) * 100
+
+    X = df.drop(["Name", "Fitness Score"], axis=1)
+    y = df["Fitness Score"]
+
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X, y)
+
+    return df, model
+
+df, model = load_model()
+
+# -----------------------------------------
+# HELPERS
+# -----------------------------------------
+def discount(score):
+    if score >= 90: return 30
+    elif score >= 80: return 25
+    elif score >= 70: return 20
+    elif score >= 60: return 15
+    elif score >= 50: return 10
+    elif score >= 40: return 5
+    else: return 0
+
+def category(score):
     if score >= 80: return "🏆 Elite"
     elif score >= 65: return "💪 Excellent"
     elif score >= 50: return "✅ Good"
     elif score >= 35: return "⚡ Fair"
     else: return "🔄 Needs Improvement"
 
-def predict_discount(score):
-    if score >= 80: return 30
-    elif score >= 65: return 20
-    elif score >= 50: return 10
-    else: return 0
+def plan(d):
+    if d >= 25: return "🌟 Premium Wellness Plan"
+    elif d >= 15: return "💼 Standard Health Plan"
+    elif d >= 5: return "🔰 Basic Fitness Cover"
+    else: return "🛡️ Essential Protection"
 
-def recommend_plan(discount):
-    if discount >= 30:
-        return "🌟 Premium Wellness Insurance"
-    elif discount >= 20:
-        return "💼 Standard Health Advantage Plan"
-    elif discount >= 10:
-        return "🔰 Basic Fitness Insurance"
-    else:
-        return "🛡️ Entry Protection Plan"
-
-df['Fitness Category'] = df['Fitness Score'].apply(categorize_fitness)
-df['Discount'] = df['Fitness Score'].apply(predict_discount)
-
-# -------------------------------
+# -----------------------------------------
 # HEADER
-# -------------------------------
-st.markdown("<div class='big-title'>💙 Smart Fitness Insurance System</div>", unsafe_allow_html=True)
-st.markdown("<div class='sub-title'>AI-driven fitness scoring & insurance personalization</div>", unsafe_allow_html=True)
+# -----------------------------------------
+st.markdown("<div class='big-title'>💙 Smart Fitness Insurance</div>", unsafe_allow_html=True)
+st.markdown("<div class='sub-title'>Personalized wellness, smarter insurance</div>", unsafe_allow_html=True)
 st.divider()
 
-# -------------------------------
-# MEMBER CHECK
-# -------------------------------
-member = st.radio("🛡️ Are you an existing insurance member?", ["Yes", "No"])
+# -----------------------------------------
+# MEMBER QUESTION
+# -----------------------------------------
+member = st.radio("Are you an existing insurance member?", ["Yes", "No"], horizontal=True)
 
-# ===============================
-# IF MEMBER
-# ===============================
+# =========================================
+# MEMBER FLOW
+# =========================================
 if member == "Yes":
     st.subheader("👤 Member Details")
 
-    name = st.text_input("Enter your name")
-    age = st.slider("Enter your age", 18, 80, 30)
+    name = st.selectbox("Select Name", df["Name"].unique())
+    age = st.slider("Age", 18, 80, 30)
 
-    if st.button("🔍 View My Insurance Dashboard"):
-        user = df.iloc[(df['Age'] - age).abs().argsort()[:1]]
-        score = user['Fitness Score'].values[0]
-        category = categorize_fitness(score)
-        discount = predict_discount(score)
-        plan = recommend_plan(discount)
+    user_row = df[(df["Name"] == name) & (df["Age"].round() == age)]
+
+    if not user_row.empty:
+        features = user_row.drop(["Name", "Fitness Score"], axis=1)
+        score = model.predict(features)[0]
+        disc = discount(score)
 
         col1, col2, col3, col4 = st.columns(4)
-        col1.metric("🏃 Fitness Score", f"{score:.1f}")
-        col2.metric("🏅 Category", category)
-        col3.metric("🎁 Discount", f"{discount}%")
-        col4.metric("📜 Plan", plan)
+        col1.metric("🏃 Fitness Score", f"{score:.2f}")
+        col2.metric("🎁 Discount", f"{disc}%")
+        col3.metric("🏅 Category", category(score))
+        col4.metric("📜 Plan", plan(disc))
 
-        if category == "🏆 Elite":
-            st.success("🎉 Congratulations! You are an ELITE member. Keep inspiring others!")
-        elif category == "💪 Excellent":
-            st.info("👏 Excellent fitness! You’re very close to Elite.")
-        elif category == "✅ Good":
-            st.warning("🙂 Good fitness — small improvements can unlock higher rewards.")
-        else:
-            st.error("💙 Let’s improve together. We recommend guided wellness plans.")
+        st.success(f"🎉 Congratulations {name}! You fall under **{category(score)}** category.")
 
         # Graphs
-        st.subheader("📊 Your Fitness Insights")
+        st.subheader("📊 Your Fitness Analytics")
+        fig1 = px.histogram(df, x="Fitness Score", nbins=30, title="Fitness Score Distribution")
+        fig2 = px.scatter_3d(df, x="Age", y="BMI", z="Steps Taken",
+                             color="Fitness Score", hover_name="Name")
 
-        fig1 = px.histogram(df, x="Fitness Score", title="Fitness Score Distribution")
         st.plotly_chart(fig1, use_container_width=True)
-
-        fig2 = px.scatter(df, x="Fitness Score", y="Discount",
-                          title="Fitness Score vs Discount",
-                          hover_data=["Age"])
         st.plotly_chart(fig2, use_container_width=True)
 
-        fig3 = px.scatter_3d(df, x="Age", y="BMI", z="Steps Taken",
-                             color="Fitness Score",
-                             title="🌐 3D Health View")
-        st.plotly_chart(fig3, use_container_width=True)
+        # Tips
+        st.info("💡 **Personalized Tips:** Stay consistent with steps, improve sleep quality, manage stress.")
 
-# ===============================
-# IF NOT MEMBER
-# ===============================
+        # Certificate
+        if st.button("📥 Download Fitness Certificate"):
+            temp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+            c = canvas.Canvas(temp.name, pagesize=A4)
+            c.setFont("Helvetica-Bold", 20)
+            c.drawCentredString(300, 800, "Fitness Insurance Certificate")
+            c.setFont("Helvetica", 14)
+            c.drawString(50, 700, f"Name: {name}")
+            c.drawString(50, 670, f"Age: {age}")
+            c.drawString(50, 640, f"Fitness Score: {score:.2f}")
+            c.drawString(50, 610, f"Category: {category(score)}")
+            c.drawString(50, 580, f"Insurance Plan: {plan(disc)}")
+            c.save()
+
+            with open(temp.name, "rb") as f:
+                st.download_button("Download Certificate", f, file_name="fitness_certificate.pdf")
+
+# =========================================
+# NON-MEMBER FLOW
+# =========================================
 else:
-    st.subheader("🆕 New User Details")
+    st.subheader("🧾 New Customer Details")
 
-    name = st.text_input("Enter your name")
-    age = st.slider("Enter your age", 18, 80, 30)
-    income = st.selectbox("Income Range", ["Below 3 LPA", "3–6 LPA", "6–10 LPA", "10+ LPA"])
-    habits = st.multiselect("Any bad habits?", ["Smoking", "Alcohol", "Sedentary Lifestyle", "None"])
+    name = st.text_input("Name")
+    age = st.slider("Age", 18, 80, 30)
+    income = st.selectbox("Income Range", ["<5 LPA", "5–10 LPA", "10–20 LPA", "20+ LPA"])
+    habits = st.multiselect("Bad Habits (if any)", ["Smoking", "Alcohol", "Sedentary Lifestyle", "None"])
 
-    if st.button("📋 Get My Plan Recommendation"):
-        st.info("🔍 Based on your inputs, here’s what we recommend:")
+    st.subheader("💡 Recommended Plans For You")
 
-        if "Smoking" in habits or "Alcohol" in habits:
-            plan = "🛡️ Preventive Care Insurance Plan"
-            tip = "🚭 We recommend quitting harmful habits to unlock better premiums."
-        elif income in ["6–10 LPA", "10+ LPA"]:
-            plan = "🌟 Premium Wellness Insurance"
-            tip = "🏃‍♂️ Ideal for long-term fitness & claim benefits."
-        else:
-            plan = "🔰 Basic Health Starter Plan"
-            tip = "💙 Affordable coverage with upgrade options."
+    st.markdown("""
+    ✔ **Basic Fitness Cover** – Affordable, essential protection  
+    ✔ **Standard Health Plan** – Balanced coverage with wellness rewards  
+    ✔ **Premium Wellness Plan** – Full health + fitness benefits  
+    """)
 
-        st.success(f"📜 Recommended Plan: **{plan}**")
-        st.write(f"💡 Tip: {tip}")
+    st.info("📞 **Get in touch with us**  
+    ✉️ mail@insurance.gmail.com  
+    📱 9812335644")
 
-# -------------------------------
-# CONTACT
-# -------------------------------
+# -----------------------------------------
+# FOOTER
+# -----------------------------------------
 st.divider()
-st.subheader("📞 Get in Touch With Us")
-
-st.markdown("""
-📧 **Email:** mail@insurance.gmail.com  
-📱 **Phone:** 9812335644  
-
-We’re happy to guide you toward a healthier and safer future 💙
-""")
-
-st.success("✅ Smart Fitness Insurance App Ready for Demo, Viva & Deployment")
+st.caption("© 2026 Smart Fitness Insurance | Health meets Intelligence")
