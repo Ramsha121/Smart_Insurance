@@ -52,7 +52,6 @@ body {
 @st.cache_data
 def load_data_and_model():
     df = pd.read_csv("fitness_claim_dataset.csv")
-    st.write("Columns in dataset:", df.columns.tolist())
     df = df.dropna()
 
     # Encode insurance column
