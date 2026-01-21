@@ -144,41 +144,16 @@ if member == "Yes":
         # Graphs
         st.subheader("📊 Your Fitness Analytics")
         fig1 = px.histogram(df, x="Fitness Score", nbins=30, title="Fitness Score Distribution")
-        fig2 = px.scatter_3d(df, x="Age", y="BMI", z="Steps Taken",
-                             color="Fitness Score", hover_name="Name")
+        fig2 = px.scatter_3d(
+            df, x="Age", y="BMI", z="Steps Taken",
+            color="Fitness Score", hover_name="Name"
+        )
 
         st.plotly_chart(fig1, use_container_width=True)
         st.plotly_chart(fig2, use_container_width=True)
 
         # Tips
-        st.info("💡 **Personalized Tips:** Stay consistent with steps, improve sleep quality, manage stress.")
-
-        # Certificate
-        certificate_text = f"""
-SMART FITNESS INSURANCE CERTIFICATE
-----------------------------------
-
-Name              : {name}
-Age               : {age}
-Fitness Score     : {score:.2f}/100
-Fitness Category  : {category(score)}
-Insurance Plan    : {plan(disc)}
-Discount Earned   : {disc}%
-
-Congratulations on taking a step toward a healthier life!
-
-Issued by:
-Smart Fitness Insurance
-Email: mail@insurance.gmail.com
-Phone: 9812335644
-"""
-
-st.download_button(
-    label="📥 Download Fitness Certificate",
-    data=certificate_text,
-    file_name="fitness_certificate.txt",
-    mime="text/plain"
-)
+        st.info("💡 **Personalized Tips:** Stay consisten
 
 
 # =========================================
