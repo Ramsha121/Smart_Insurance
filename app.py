@@ -9,9 +9,7 @@ import plotly.express as px
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
-import tempfile
+
 
 # -----------------------------------------
 # PAGE CONFIG
@@ -156,21 +154,32 @@ if member == "Yes":
         st.info("💡 **Personalized Tips:** Stay consistent with steps, improve sleep quality, manage stress.")
 
         # Certificate
-        if st.button("📥 Download Fitness Certificate"):
-            temp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-            c = canvas.Canvas(temp.name, pagesize=A4)
-            c.setFont("Helvetica-Bold", 20)
-            c.drawCentredString(300, 800, "Fitness Insurance Certificate")
-            c.setFont("Helvetica", 14)
-            c.drawString(50, 700, f"Name: {name}")
-            c.drawString(50, 670, f"Age: {age}")
-            c.drawString(50, 640, f"Fitness Score: {score:.2f}")
-            c.drawString(50, 610, f"Category: {category(score)}")
-            c.drawString(50, 580, f"Insurance Plan: {plan(disc)}")
-            c.save()
+        certificate_text = f"""
+SMART FITNESS INSURANCE CERTIFICATE
+----------------------------------
 
-            with open(temp.name, "rb") as f:
-                st.download_button("Download Certificate", f, file_name="fitness_certificate.pdf")
+Name              : {name}
+Age               : {age}
+Fitness Score     : {score:.2f}/100
+Fitness Category  : {category(score)}
+Insurance Plan    : {plan(disc)}
+Discount Earned   : {disc}%
+
+Congratulations on taking a step toward a healthier life!
+
+Issued by:
+Smart Fitness Insurance
+Email: mail@insurance.gmail.com
+Phone: 9812335644
+"""
+
+st.download_button(
+    label="📥 Download Fitness Certificate",
+    data=certificate_text,
+    file_name="fitness_certificate.txt",
+    mime="text/plain"
+)
+
 
 # =========================================
 # NON-MEMBER FLOW
