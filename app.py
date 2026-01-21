@@ -56,8 +56,12 @@ def load_data_and_model():
     df = df.dropna()
 
     # Encode insurance column
+    from sklearn.preprocessing import LabelEncoder
     le = LabelEncoder()
-    df["insurance"] = le.fit_transform(df["insurance"])
+    insurance_cols = [col for col in df.columns if "insur" in col.lower()]
+    if insurance_cols:
+    df[insurance_cols[0]] = le.fit_transform(df[insurance_cols[0]])
+
 
     scaler = StandardScaler()
     numerical_columns = df.select_dtypes(include=[np.number]).columns.difference(['Age'])
