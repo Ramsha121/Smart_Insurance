@@ -1,230 +1,242 @@
 # ===============================
-# SMART FITNESS INSURANCE APP
+# SMART FITNESS INSURANCE DASHBOARD
 # ===============================
 
 import streamlit as st
 import pandas as pd
 import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
 import plotly.express as px
-from sklearn.preprocessing import LabelEncoder, StandardScaler
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+import warnings
+warnings.filterwarnings("ignore")
 
 # -------------------------------
 # PAGE CONFIG
 # -------------------------------
 st.set_page_config(
-    page_title="Smart Fitness Insurance",
+    page_title="Smart Fitness Analytics",
     page_icon="💙",
     layout="wide"
 )
 
 # -------------------------------
-# CUSTOM CSS (Theme)
+# STYLING
 # -------------------------------
+sns.set_palette("husl")
+plt.style.use("seaborn-v0_8")
+
 st.markdown("""
 <style>
-body {
-    background-color: #f4f9ff;
-}
 .big-title {
-    font-size: 42px;
+    font-size: 40px;
     font-weight: 700;
     color: #0f4c75;
 }
-.sub-title {
-    font-size: 18px;
-    color: #3282b8;
-}
-.metric-box {
+.section {
     background-color: #ffffff;
     padding: 20px;
-    border-radius: 15px;
-    box-shadow: 0px 4px 12px rgba(0,0,0,0.08);
-    text-align: center;
+    border-radius: 14px;
+    box-shadow: 0px 4px 12px rgba(0,0,0,0.06);
+    margin-bottom: 25px;
 }
 </style>
 """, unsafe_allow_html=True)
 
 # -------------------------------
-# LOAD DATA & MODEL (UNCHANGED LOGIC)
-# -------------------------------
-@st.cache_data
-def load_data_and_model():
-    df = pd.read_csv("fitness_claim_dataset.csv")
-    df = df.dropna()
-
-    # Encode insurance column
-    from sklearn.preprocessing import LabelEncoder
-    le = LabelEncoder()
-    insurance_cols = [col for col in df.columns if "insur" in col.lower()]
-    if insurance_cols:
-        df[insurance_cols[0]] = le.fit_transform(df[insurance_cols[0]])
-        scaler = StandardScaler()
-        numerical_columns = df.select_dtypes(include=[np.number]).columns.difference(['Age'])
-        df[numerical_columns] = scaler.fit_transform(df[numerical_columns])
-
-    # FITNESS SCORE (same logic)
-    df['Fitness Score'] = (
-        0.1 * df['Blood Pressure (Systolic)'] +
-        0.1 * df['Blood Pressure (Diastolic)'] +
-        0.15 * df['Heart Beats'] +
-        0.15 * df['BMI'] +
-        0.1 * df['Cholesterol'] +
-        0.2 * df['Steps Taken'] +
-        0.1 * df['Active Minutes'] +
-        0.1 * df['Sleep Duration'] +
-        0.05 * df['Sleep Quality'] +
-        0.15 * df['VO2 Max'] +
-        0.1 * df['Calories Burned'] +
-        0.15 * df['SpO2 Levels'] -
-        0.2 * df['Stress Levels']
-    )
-
-    df['Fitness Score'] = (
-        (df['Fitness Score'] - df['Fitness Score'].min()) /
-        (df['Fitness Score'].max() - df['Fitness Score'].min())
-    ) * 100
-
-    X = df.drop(['Name', 'Fitness Score'], axis=1)
-    y = df['Fitness Score']
-
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
-
-    model = RandomForestRegressor(n_estimators=100, random_state=42)
-    model.fit(X_train, y_train)
-
-    return df, model
-
-# -------------------------------
-# DISCOUNT LOGIC (UNCHANGED)
-# -------------------------------
-def predict_discount(score):
-    if score >= 90:
-        return 30
-    elif score >= 80:
-        return 25
-    elif score >= 70:
-        return 20
-    elif score >= 60:
-        return 15
-    elif score >= 50:
-        return 10
-    elif score >= 40:
-        return 5
-    else:
-        return 0
-
-# -------------------------------
-# LOAD EVERYTHING
-# -------------------------------
-df, model = load_data_and_model()
-
-# -------------------------------
 # HEADER
 # -------------------------------
-st.markdown("<div class='big-title'>💙 Smart Fitness-Based Insurance System</div>", unsafe_allow_html=True)
-st.markdown("<div class='sub-title'>AI-powered wellness scoring for personalized insurance benefits</div>", unsafe_allow_html=True)
-st.divider()
+st.markdown("<div class='big-title'>💙 Comprehensive Fitness & Insurance Analytics</div>", unsafe_allow_html=True)
+st.caption("End-to-end data exploration, visualization & wellness scoring")
 
 # -------------------------------
-# SIDEBAR INPUT
+# LOAD DATA
 # -------------------------------
-st.sidebar.header("👤 Customer Details")
+@st.cache_data
+def load_data():
+    df = pd.read_csv("fitness_claim_dataset.csv")
+    return df.dropna()
 
-selected_name = st.sidebar.selectbox("Select Name", df["Name"].unique())
-selected_age = st.sidebar.slider("Age", 18, 80, 30)
-
-# -------------------------------
-# PREDICTION
-# -------------------------------
-row = df[(df["Name"] == selected_name) & (df["Age"] == selected_age)]
-
-if not row.empty:
-    features = row.drop(['Name', 'Fitness Score'], axis=1)
-    score = model.predict(features)[0]
-    discount = predict_discount(score)
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        st.markdown("<div class='metric-box'>", unsafe_allow_html=True)
-        st.metric("🏃 Fitness Score", f"{score:.2f}/100")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    with col2:
-        st.markdown("<div class='metric-box'>", unsafe_allow_html=True)
-        st.metric("🎁 Insurance Discount", f"{discount}%")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    with col3:
-        st.markdown("<div class='metric-box'>", unsafe_allow_html=True)
-        risk = "Low Risk ✅" if score >= 70 else "Moderate ⚠️" if score >= 50 else "High Risk 🚨"
-        st.metric("📊 Risk Category", risk)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-else:
-    st.warning("No matching customer found.")
-
-st.divider()
+df = load_data()
 
 # -------------------------------
-# INTERACTIVE VISUALS
+# DATA OVERVIEW
 # -------------------------------
-st.subheader("📊 Interactive Health Analytics")
-
-tab1, tab2, tab3 = st.tabs(["🏃 Fitness Distribution", "🎯 Score vs Discount", "🌐 3D Health View"])
-
-with tab1:
-    fig = px.histogram(
-        df,
-        x="Fitness Score",
-        nbins=25,
-        color_discrete_sequence=["#3282b8"],
-        title="Fitness Score Distribution"
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-with tab2:
-    df["Predicted Discount"] = df["Fitness Score"].apply(predict_discount)
-    fig = px.scatter(
-        df,
-        x="Fitness Score",
-        y="Predicted Discount",
-        color="Predicted Discount",
-        size="Fitness Score",
-        title="Fitness Score vs Insurance Discount",
-        hover_data=["Name", "Age"]
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-with tab3:
-    fig = px.scatter_3d(
-        df,
-        x="Age",
-        y="BMI",
-        z="Steps Taken",
-        color="Fitness Score",
-        size="Fitness Score",
-        hover_name="Name",
-        title="3D Health & Fitness Landscape"
-    )
-    st.plotly_chart(fig, use_container_width=True)
+st.markdown("<div class='section'>", unsafe_allow_html=True)
+st.subheader("📋 Dataset Overview")
+st.write("**Shape:**", df.shape)
+st.dataframe(df.head())
+st.markdown("</div>", unsafe_allow_html=True)
 
 # -------------------------------
-# BUSINESS IMPACT
+# ENCODING
 # -------------------------------
-st.divider()
-st.subheader("🏦 Why Insurance Companies Care")
+categorical_cols = df.select_dtypes(include=["object"]).columns.difference(["Name"])
+df_encoded = df.copy()
+encoders = {}
 
-st.markdown("""
-✔ **Risk-based premium optimization**  
-✔ **Rewards healthy customers with lower premiums**  
-✔ **Encourages long-term wellness engagement**  
-✔ **Reduces claim probability using predictive analytics**  
-✔ **Data-driven underwriting decisions**
-""")
+for col in categorical_cols:
+    le = LabelEncoder()
+    df_encoded[col] = le.fit_transform(df[col])
+    encoders[col] = le
 
-st.success("✅ Project demonstrates real-world InsurTech + HealthTech integration")
+numeric_cols = df_encoded.select_dtypes(include=[np.number]).columns
+
+# -------------------------------
+# STATISTICS
+# -------------------------------
+st.markdown("<div class='section'>", unsafe_allow_html=True)
+st.subheader("📈 Statistical Summary")
+st.dataframe(df_encoded[numeric_cols].describe().round(2))
+st.markdown("</div>", unsafe_allow_html=True)
+
+# -------------------------------
+# PAIRPLOT
+# -------------------------------
+st.markdown("<div class='section'>", unsafe_allow_html=True)
+st.subheader("🔍 Fitness Relationships (Pairplot)")
+
+selected_cols = ['Age', 'BMI', 'Steps Taken', 'Sleep Duration', 'Stress Levels']
+fig = sns.pairplot(df_encoded[selected_cols], diag_kind="kde")
+st.pyplot(fig)
+st.markdown("</div>", unsafe_allow_html=True)
+
+# -------------------------------
+# CORRELATION HEATMAP
+# -------------------------------
+st.markdown("<div class='section'>", unsafe_allow_html=True)
+st.subheader("🔥 Correlation Heatmap")
+
+plt.figure(figsize=(14, 10))
+corr = df_encoded[numeric_cols].corr()
+sns.heatmap(corr, cmap="RdYlBu_r", center=0, square=True)
+st.pyplot(plt.gcf())
+plt.clf()
+st.markdown("</div>", unsafe_allow_html=True)
+
+# -------------------------------
+# BOXPLOTS
+# -------------------------------
+st.markdown("<div class='section'>", unsafe_allow_html=True)
+st.subheader("💓 Health Metric Distributions")
+
+metrics = [
+    'Blood Pressure (Systolic)',
+    'Blood Pressure (Diastolic)',
+    'Heart Beats',
+    'BMI'
+]
+
+fig, axes = plt.subplots(2, 2, figsize=(16, 10))
+axes = axes.flatten()
+
+for ax, metric in zip(axes, metrics):
+    sns.boxplot(y=df_encoded[metric], ax=ax)
+    ax.set_title(metric)
+
+st.pyplot(fig)
+plt.clf()
+st.markdown("</div>", unsafe_allow_html=True)
+
+# -------------------------------
+# 3D PLOTLY
+# -------------------------------
+st.markdown("<div class='section'>", unsafe_allow_html=True)
+st.subheader("🌐 3D Health Universe")
+
+fig3d = px.scatter_3d(
+    df_encoded,
+    x="Age",
+    y="BMI",
+    z="Steps Taken",
+    color="Stress Levels",
+    size="Heart Beats",
+    hover_name="Name"
+)
+st.plotly_chart(fig3d, use_container_width=True)
+st.markdown("</div>", unsafe_allow_html=True)
+
+# -------------------------------
+# FITNESS SCORE
+# -------------------------------
+df_encoded["Fitness Score"] = (
+    -0.15 * (df_encoded['Blood Pressure (Systolic)'] - 120) / 20
+    -0.15 * (df_encoded['Blood Pressure (Diastolic)'] - 80) / 10
+    -0.10 * (df_encoded['Heart Beats'] - 70) / 30
+    -0.15 * (df_encoded['BMI'] - 22) / 8
+    -0.10 * (df_encoded['Cholesterol'] - 200) / 100
+    +0.20 * df_encoded['Steps Taken'] / 10000
+    +0.15 * df_encoded['Active Minutes'] / 60
+    +0.10 * (df_encoded['Sleep Duration'] - 7) / 2
+    +0.15 * df_encoded['Sleep Quality'] / 10
+    +0.20 * df_encoded['VO2 Max'] / 50
+    +0.10 * df_encoded['Calories Burned'] / 2000
+    +0.20 * df_encoded['SpO2 Levels'] / 100
+    -0.25 * df_encoded['Stress Levels'] / 10
+)
+
+df_encoded["Fitness Score"] = (
+    (df_encoded["Fitness Score"] - df_encoded["Fitness Score"].min()) /
+    (df_encoded["Fitness Score"].max() - df_encoded["Fitness Score"].min()) * 100
+)
+
+# -------------------------------
+# FITNESS CATEGORY
+# -------------------------------
+def categorize_fitness(score):
+    if score >= 80:
+        return "🏆 Elite"
+    elif score >= 65:
+        return "💪 Excellent"
+    elif score >= 50:
+        return "✅ Good"
+    elif score >= 35:
+        return "⚡ Fair"
+    else:
+        return "🔄 Needs Improvement"
+
+df_encoded["Fitness Category"] = df_encoded["Fitness Score"].apply(categorize_fitness)
+
+# -------------------------------
+# FITNESS DISTRIBUTION
+# -------------------------------
+st.markdown("<div class='section'>", unsafe_allow_html=True)
+st.subheader("🏃 Fitness Score Distribution")
+
+fig, ax = plt.subplots(figsize=(12, 6))
+sns.histplot(df_encoded["Fitness Score"], kde=True, bins=25, ax=ax)
+st.pyplot(fig)
+plt.clf()
+
+category_counts = df_encoded["Fitness Category"].value_counts()
+fig2, ax2 = plt.subplots()
+ax2.pie(category_counts, labels=category_counts.index, autopct="%1.1f%%")
+st.pyplot(fig2)
+plt.clf()
+st.markdown("</div>", unsafe_allow_html=True)
+
+# -------------------------------
+# AGE GROUP ANALYSIS
+# -------------------------------
+df_encoded["Age Group"] = pd.cut(
+    df_encoded["Age"],
+    bins=[18, 30, 40, 50, 60, 100],
+    labels=["18–29", "30–39", "40–49", "50–59", "60+"]
+)
+
+st.markdown("<div class='section'>", unsafe_allow_html=True)
+st.subheader("📊 Age-wise Fitness Trends")
+
+fig, ax = plt.subplots(figsize=(12, 6))
+sns.violinplot(x="Age Group", y="Fitness Score", data=df_encoded, ax=ax)
+st.pyplot(fig)
+plt.clf()
+st.markdown("</div>", unsafe_allow_html=True)
+
+# -------------------------------
+# SAVE DATA
+# -------------------------------
+df_encoded.to_csv("enhanced_fitness_analysis.csv", index=False)
+
+st.success("✅ Analysis complete. Enhanced dataset saved.")
