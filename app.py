@@ -60,12 +60,10 @@ def load_data_and_model():
     le = LabelEncoder()
     insurance_cols = [col for col in df.columns if "insur" in col.lower()]
     if insurance_cols:
-    df[insurance_cols[0]] = le.fit_transform(df[insurance_cols[0]])
-
-
-    scaler = StandardScaler()
-    numerical_columns = df.select_dtypes(include=[np.number]).columns.difference(['Age'])
-    df[numerical_columns] = scaler.fit_transform(df[numerical_columns])
+        df[insurance_cols[0]] = le.fit_transform(df[insurance_cols[0]])
+        scaler = StandardScaler()
+        numerical_columns = df.select_dtypes(include=[np.number]).columns.difference(['Age'])
+        df[numerical_columns] = scaler.fit_transform(df[numerical_columns])
 
     # FITNESS SCORE (same logic)
     df['Fitness Score'] = (
