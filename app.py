@@ -191,12 +191,15 @@ else:
     ✔ **Premium Wellness Plan** – Full health + fitness benefits  
     """)
 
-    st.info("📞 **Get in touch with us** ")
-    ✉️ mail@insurance.gmail.com  
-    📱 9812335644")
+st.info(
+    "📞 **Get in touch with us**\n\n"
+    "✉️ Email: mail@insurance.gmail.com\n\n"
+    "📱 Phone: 9812335644"
+)
+
 
 # -----------------------------------------
 # FOOTER
 # -----------------------------------------
 st.divider()
-st.caption("© 2026 Smart Fitness Insurance | Health meets Intelligence")
+st.caption("© 2026 Smart Fitness Insurance |Where Health meets Intelligence")
