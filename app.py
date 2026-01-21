@@ -191,7 +191,7 @@ else:
     ✔ **Premium Wellness Plan** – Full health + fitness benefits  
     """)
 
-    st.info("📞 **Get in touch with us**  
+    st.info("📞 **Get in touch with us** ")
     ✉️ mail@insurance.gmail.com  
     📱 9812335644")
 
