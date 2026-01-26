@@ -1,206 +1,233 @@
 # =========================================
-# SMART FITNESS INSURANCE – STREAMLIT APP
+# SMART FITNESS + INSURANCE RECOMMENDATION
 # =========================================
 
 import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-from sklearn.preprocessing import StandardScaler
+
+from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.ensemble import RandomForestRegressor
 
 # -----------------------------------------
 # PAGE CONFIG
 # -----------------------------------------
 st.set_page_config(
-    page_title="Smart Fitness Insurance",
+    page_title="Smart Insurance Intelligence",
     page_icon="💙",
     layout="wide"
 )
 
 # -----------------------------------------
-# DATA SOURCE (RAW GITHUB)
+# DATA URLs (RAW GITHUB)
 # -----------------------------------------
-DATA_URL = "https://raw.githubusercontent.com/Ramsha121/Smart_Insurance/data/base_plans.csv"
+BASE_PLANS_URL = "https://raw.githubusercontent.com/Ramsha121/Smart_Insurance/data/base_plans.csv"
+FITNESS_URL = "https://raw.githubusercontent.com/Ramsha121/Smart_Insurance/data/fitness_claims.csv"
 
 # -----------------------------------------
-# LOAD & TRAIN MODEL (SAFE)
+# LOAD DATA
 # -----------------------------------------
 @st.cache_data
-def load_and_train():
-    df = pd.read_csv(DATA_URL)
+def load_base_plans():
+    df = pd.read_csv(BASE_PLANS_URL)
+    df.columns = df.columns.str.strip().str.lower()
+    return df
 
-    # 🔒 Normalize column names (CRITICAL FIX)
+@st.cache_data
+def load_fitness_data():
+    df = pd.read_csv(FITNESS_URL)
     df.columns = df.columns.str.strip()
+    return df
 
-    REQUIRED_FEATURES = [
-        "Age",
-        "Blood Pressure (Systolic)",
-        "Blood Pressure (Diastolic)",
-        "Heart Beats",
-        "BMI",
-        "Cholesterol",
-        "Steps Taken",
-        "Active Minutes",
-        "Sleep Duration",
-        "Sleep Quality",
-        "VO2 Max",
-        "Calories Burned",
-        "SpO2 Levels",
-        "Stress Levels"
-    ]
+base_df = load_base_plans()
+fitness_df = load_fitness_data()
 
-    TARGET = "Claim Amount"
+# -----------------------------------------
+# TRAIN FITNESS → CLAIM MODEL
+# -----------------------------------------
+FITNESS_FEATURES = [
+    "Age",
+    "Blood Pressure (Systolic)",
+    "Blood Pressure (Diastolic)",
+    "Heart Beats",
+    "BMI",
+    "Cholesterol",
+    "Steps Taken",
+    "Active Minutes",
+    "Sleep Duration",
+    "Sleep Quality",
+    "VO2 Max",
+    "Calories Burned",
+    "SpO2 Levels",
+    "Stress Levels"
+]
 
-    # ✅ Validate columns
-    missing = [c for c in REQUIRED_FEATURES + [TARGET] if c not in df.columns]
-    if missing:
-        st.error("❌ Dataset column mismatch detected")
-        st.write("Missing columns:", missing)
-        st.write("Available columns:", list(df.columns))
-        st.stop()
+TARGET = "Claim Amount"
 
-    X = df[REQUIRED_FEATURES]
-    y = df[TARGET]
+@st.cache_resource
+def train_claim_model():
+    X = fitness_df[FITNESS_FEATURES]
+    y = fitness_df[TARGET]
 
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
 
     model = RandomForestRegressor(
-        n_estimators=150,
+        n_estimators=200,
         random_state=42
     )
     model.fit(X_scaled, y)
 
-    return df, model, scaler, REQUIRED_FEATURES
+    return model, scaler
 
-df, model, scaler, FEATURES = load_and_train()
+claim_model, scaler = train_claim_model()
 
 # -----------------------------------------
-# FITNESS LOGIC
+# HELPERS
 # -----------------------------------------
-def fitness_score(u):
+def fitness_score(row):
     score = (
-        0.12 * u["Steps Taken"] +
-        0.10 * u["Active Minutes"] +
-        0.10 * u["Sleep Duration"] +
-        0.08 * u["Sleep Quality"] +
-        0.10 * u["VO2 Max"] +
-        0.10 * u["SpO2 Levels"] -
-        0.15 * u["Stress Levels"] -
-        0.08 * u["BMI"]
+        0.15 * row["Steps Taken"]
+        + 0.15 * row["Active Minutes"]
+        + 0.1 * row["Sleep Duration"]
+        + 0.1 * row["Sleep Quality"]
+        + 0.1 * row["VO2 Max"]
+        - 0.15 * row["Stress Levels"]
+        - 0.1 * row["BMI"]
     )
-    return float(np.clip(score, 0, 100))
+    return np.clip(score, 0, 100)
 
-def category(score):
-    if score >= 80: return "Elite"
-    elif score >= 65: return "Excellent"
-    elif score >= 50: return "Good"
-    elif score >= 35: return "Fair"
-    else: return "Needs Improvement"
-
-def plan(score):
-    if score >= 75: return "Starlite Premium"
-    elif score >= 60: return "Starlite Basic"
-    elif score >= 45: return "MaxBupa Silver"
-    else: return "MaxBupa Gold"
+def recommend_policy(age, income, occupation):
+    df = base_df[base_df["occupation"].str.lower() == occupation.lower()]
+    if df.empty:
+        return "Starlite Basic"
+    return df.groupby("insurance")["premium"].mean().idxmin()
 
 # -----------------------------------------
 # HEADER
 # -----------------------------------------
-st.title("💙 Smart Fitness Insurance")
-st.caption("Health-driven personalized insurance intelligence")
+st.title("💙 Smart Fitness-Based Insurance System")
+st.caption("Personalized health insights + intelligent policy recommendation")
 st.divider()
 
 # =========================================
-# USER INPUT
+# USER INPUT SECTION
 # =========================================
-st.subheader("🧍 Enter Your Health Details")
+st.subheader("🧍 Enter Your Details")
 
-c1, c2, c3 = st.columns(3)
+col1, col2, col3 = st.columns(3)
 
-with c1:
-    age = st.slider("Age", 18, 100, 30)
-    bmi = st.number_input("BMI", 10.0, 50.0, 24.0)
-    sys = st.number_input("BP Systolic", 90, 200, 120)
-    dia = st.number_input("BP Diastolic", 60, 130, 80)
+with col1:
+    name = st.text_input("Name")
+    age = st.slider("Age", 18, 80, 30)
+    occupation = st.selectbox(
+        "Occupation",
+        sorted(base_df["occupation"].unique())
+    )
 
-with c2:
-    heart = st.number_input("Heart Beats", 40, 200, 72)
-    chol = st.number_input("Cholesterol", 100, 400, 180)
-    spo2 = st.number_input("SpO2 Levels", 85, 100, 98)
-    stress = st.slider("Stress Levels", 0, 100, 30)
+with col2:
+    income = st.number_input("Annual Income (₹)", 50000, 5000000, 400000)
+    bmi = st.number_input("BMI", 15.0, 40.0, 22.0)
+    stress = st.slider("Stress Level", 1, 10, 4)
 
-with c3:
-    steps = st.number_input("Steps Taken", 0, 40000, 8000)
-    active = st.number_input("Active Minutes", 0, 300, 45)
-    sleep = st.number_input("Sleep Duration (hrs)", 0.0, 12.0, 7.0)
-    sleep_q = st.slider("Sleep Quality", 0, 100, 70)
-    vo2 = st.number_input("VO2 Max", 10.0, 80.0, 40.0)
-    calories = st.number_input("Calories Burned", 500, 6000, 2200)
+with col3:
+    steps = st.number_input("Daily Steps", 1000, 20000, 8000)
+    sleep = st.slider("Sleep Duration (hrs)", 4.0, 10.0, 7.0)
+    vo2 = st.slider("VO2 Max", 20.0, 60.0, 40.0)
 
-# =========================================
+# -----------------------------------------
 # PREDICTION
-# =========================================
-if st.button("🔍 Get Personalized Recommendation"):
+# -----------------------------------------
+if st.button("🔍 Generate Personalized Recommendation"):
 
-    user = {
+    user_row = {
         "Age": age,
-        "Blood Pressure (Systolic)": sys,
-        "Blood Pressure (Diastolic)": dia,
-        "Heart Beats": heart,
+        "Blood Pressure (Systolic)": 120,
+        "Blood Pressure (Diastolic)": 80,
+        "Heart Beats": 72,
         "BMI": bmi,
-        "Cholesterol": chol,
+        "Cholesterol": 180,
         "Steps Taken": steps,
-        "Active Minutes": active,
+        "Active Minutes": 45,
         "Sleep Duration": sleep,
-        "Sleep Quality": sleep_q,
+        "Sleep Quality": 7,
         "VO2 Max": vo2,
-        "Calories Burned": calories,
-        "SpO2 Levels": spo2,
+        "Calories Burned": 2200,
+        "SpO2 Levels": 98,
         "Stress Levels": stress
     }
 
-    user_df = pd.DataFrame([user])
-    user_scaled = scaler.transform(user_df[FEATURES])
+    user_df = pd.DataFrame([user_row])
+    user_scaled = scaler.transform(user_df[FITNESS_FEATURES])
 
-    claim = model.predict(user_scaled)[0]
-    score = fitness_score(user)
+    predicted_claim = claim_model.predict(user_scaled)[0]
+    score = fitness_score(user_row)
+    policy = recommend_policy(age, income, occupation)
 
+    # -----------------------------------------
+    # OUTPUT
+    # -----------------------------------------
     st.divider()
-    st.subheader("🎯 Personalized Results")
+    st.subheader(f"🎯 Personalized Results for {name}")
 
-    a, b, c, d = st.columns(4)
-    a.metric("Fitness Score", f"{score:.2f}")
-    b.metric("Category", category(score))
-    c.metric("Estimated Claim", f"₹ {claim:,.0f}")
-    d.metric("Recommended Plan", plan(score))
+    c1, c2, c3 = st.columns(3)
+    c1.metric("🏃 Fitness Score", f"{score:.1f}")
+    c2.metric("💰 Estimated Claim", f"₹{predicted_claim:,.0f}")
+    c3.metric("📄 Recommended Policy", policy)
 
-    st.success(
-        f"You fall under **{category(score)}** category. "
-        f"Recommended plan: **{plan(score)}**."
+    st.success(f"✅ Best policy for you: **{policy}**")
+
+    # -----------------------------------------
+    # VISUALIZATION 1: POLICY DISTRIBUTION
+    # -----------------------------------------
+    st.subheader("📊 Insurance Policy Distribution")
+    fig1 = px.pie(
+        base_df,
+        names="insurance",
+        title="Overall Policy Distribution"
+    )
+    st.plotly_chart(fig1, use_container_width=True)
+
+    # -----------------------------------------
+    # VISUALIZATION 2: OCCUPATION vs POLICY
+    # -----------------------------------------
+    st.subheader("📊 Occupation–Policy Preference")
+    occ_matrix = pd.crosstab(
+        base_df["occupation"],
+        base_df["insurance"]
+    )
+    fig2 = px.imshow(
+        occ_matrix,
+        text_auto=True,
+        aspect="auto"
+    )
+    st.plotly_chart(fig2, use_container_width=True)
+
+    # -----------------------------------------
+    # BUSINESS INSIGHTS
+    # -----------------------------------------
+    st.subheader("🧠 Business Insights")
+
+    insight_df = base_df.groupby("insurance").agg(
+        Customers=("insurance", "count"),
+        AvgPremium=("premium", "mean"),
+        TotalRevenue=("premium", "sum")
+    ).reset_index()
+
+    insight_df["Rev/Customer"] = (
+        insight_df["TotalRevenue"] / insight_df["Customers"]
     )
 
-    # Benchmark plot
-    fig = px.scatter(
-        df,
-        x="Age",
-        y="Claim Amount",
-        opacity=0.3,
-        title="Age vs Claim Amount Benchmark"
-    )
-    fig.add_scatter(
-        x=[age],
-        y=[claim],
-        mode="markers",
-        marker=dict(size=14),
-        name="You"
-    )
+    st.dataframe(insight_df, use_container_width=True)
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.info(
+        "💡 **Insight:** StarLite plans dominate across occupations with strong revenue stability, "
+        "while MaxBupa plans cater to niche high-risk segments."
+    )
 
 # -----------------------------------------
 # FOOTER
 # -----------------------------------------
 st.divider()
-st.caption("© 2026 Smart Fitness Insurance | AI-Driven Wellness Protection")
+st.caption("© 2026 Smart Insurance | Health meets Intelligence")
