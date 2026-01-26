@@ -22,7 +22,7 @@ st.set_page_config(
 # -----------------------------------------
 # DATA URLs (RAW GITHUB)
 # -----------------------------------------
-BASE_PLANS_URL = "https://github.com/Ramsha121/Smart_Insurance/blob/data/base_plans.csv"
+BASE_PLANS_URL = "https://raw.githubusercontent.com/Ramsha121/Smart_Insurance/data/base_plans.csv"
 FITNESS_URL = "https://github.com/Ramsha121/Smart_Insurance/blob/data/fitness_claim_dataset.csv"
 
 # -----------------------------------------
