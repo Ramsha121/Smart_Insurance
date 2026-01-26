@@ -26,7 +26,7 @@ st.markdown("AI-driven insurance insights with fitness-inspired analytics")
 # -------------------------------
 # LOAD DATA FROM GITHUB
 # -------------------------------
-DATA_URL = "https://github.com/Ramsha121/Smart_Insurance/blob/data/base_plans.csv"
+DATA_URL = "https://raw.githubusercontent.com/Ramsha121/Smart_Insurance/data/base_plans.csv"
 
 @st.cache_data
 def load_data():
@@ -45,8 +45,7 @@ def load_data():
         st.stop()
 
 df = load_data()
-st.write("Dataset shape:", df.shape)
-st.dataframe(df.head())
+
 
 
 # -------------------------------
