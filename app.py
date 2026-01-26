@@ -30,9 +30,24 @@ DATA_URL = "https://github.com/Ramsha121/Smart_Insurance/blob/data/base_plans.cs
 
 @st.cache_data
 def load_data():
-    return pd.read_csv(DATA_URL)
+    try:
+        df = pd.read_csv(
+            DATA_URL,
+            sep=None,              # auto-detect delimiter
+            engine="python",
+            encoding="utf-8",
+            on_bad_lines="skip"    # skip malformed rows
+        )
+        return df
+    except Exception as e:
+        st.error("❌ Failed to load dataset from GitHub")
+        st.exception(e)
+        st.stop()
 
 df = load_data()
+st.write("Dataset shape:", df.shape)
+st.dataframe(df.head())
+
 
 # -------------------------------
 # BASIC FEATURE ENGINEERING
