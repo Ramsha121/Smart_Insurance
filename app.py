@@ -23,7 +23,7 @@ st.set_page_config(
 # -----------------------------------------
 st.markdown("""
 <style>
-.big-title {font-size:40px; font-weight:700; color:#0f4c75;}
+.big-title {font-size:42px; font-weight:800; color:#0f4c75;}
 .sub-title {font-size:18px; color:#3282b8;}
 .card {
     background:white;
@@ -128,8 +128,11 @@ if member == "Yes":
 
     st.subheader("👤 Member Details")
 
-    name = st.selectbox("Select Name", df["Name"].unique())
-    age = st.slider("Age", 18, 80, 30)
+    colA, colB = st.columns(2)
+    with colA:
+        name = st.selectbox("Select Name", df["Name"].unique())
+    with colB:
+        age = st.slider("Age", 18, 80, 30)
 
     user_row = df[(df["Name"] == name) & (df["Age"].round() == age)]
 
@@ -138,35 +141,53 @@ if member == "Yes":
         score = model.predict(features)[0]
         disc = discount(score)
 
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric("🏃 Fitness Score", f"{score:.2f}")
-        col2.metric("🎁 Discount", f"{disc}%")
-        col3.metric("🏅 Category", category(score))
-        col4.metric("📜 Plan", plan(disc))
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("🏃 Fitness Score", f"{score:.2f}")
+        c2.metric("🎁 Discount", f"{disc}%")
+        c3.metric("🏅 Category", category(score))
+        c4.metric("📜 Plan", plan(disc))
 
-        st.success(f"🎉 Congratulations {name}! You are in the **{category(score)}** category.")
+        st.success(f"🎉 Congratulations **{name}**! You fall under **{category(score)}** category.")
 
+        # ---------------------------------
+        # ANALYTICS
+        # ---------------------------------
         st.subheader("📊 Your Fitness Analytics")
 
-        fig1 = px.histogram(df, x="Fitness Score", nbins=30,
-                            title="Fitness Score Distribution")
+        fig1 = px.histogram(
+            df,
+            x="Fitness Score",
+            nbins=30,
+            title="Overall Fitness Score Distribution"
+        )
+
         fig2 = px.scatter_3d(
             df,
-            x="Age", y="BMI", z="Steps Taken",
+            x="Age",
+            y="BMI",
+            z="Steps Taken",
             color="Fitness Score",
-            hover_name="Name"
+            hover_name="Name",
+            title="Age vs BMI vs Steps"
         )
 
         st.plotly_chart(fig1, use_container_width=True)
         st.plotly_chart(fig2, use_container_width=True)
 
+        # ---------------------------------
+        # RECOMMENDATIONS
+        # ---------------------------------
         st.info(
-            "💡 **Personalized Tips:**\n"
-            "- Maintain daily step goals\n"
-            "- Improve sleep consistency\n"
-            "- Manage stress with mindfulness"
+            "💡 **Personalized Health Tips**\n\n"
+            "- Maintain consistent daily steps\n"
+            "- Improve sleep duration & quality\n"
+            "- Practice stress management techniques\n"
+            "- Stay hydrated and active"
         )
 
+        # ---------------------------------
+        # CERTIFICATE DOWNLOAD
+        # ---------------------------------
         certificate_text = f"""
 SMART FITNESS INSURANCE CERTIFICATE
 ----------------------------------
@@ -191,6 +212,9 @@ Phone: 9812335644
             mime="text/plain"
         )
 
+    else:
+        st.warning("⚠️ No matching record found for selected age.")
+
 # =========================================
 # NON-MEMBER FLOW
 # =========================================
@@ -208,11 +232,12 @@ else:
         ["Smoking", "Alcohol", "Sedentary Lifestyle", "None"]
     )
 
-    st.subheader("💡 Recommended Plans For You")
+    st.subheader("💡 Recommended Insurance Plans")
+
     st.markdown("""
     ✔ **Basic Fitness Cover** – Affordable, essential protection  
-    ✔ **Standard Health Plan** – Balanced coverage with wellness rewards  
-    ✔ **Premium Wellness Plan** – Full health + fitness benefits  
+    ✔ **Standard Health Plan** – Balanced coverage + rewards  
+    ✔ **Premium Wellness Plan** – Full fitness & medical benefits  
     """)
 
 # -----------------------------------------
@@ -220,8 +245,8 @@ else:
 # -----------------------------------------
 st.info(
     "📞 **Get in touch with us**\n\n"
-    "✉️ Email: mail@insurance.gmail.com\n\n"
-    "📱 Phone: 9812335644"
+    "Email: mail@insurance.gmail.com\n\n"
+    "Phone: 9812335644"
 )
 
 # -----------------------------------------
