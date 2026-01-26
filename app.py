@@ -4,7 +4,9 @@ import numpy as np
 import plotly.express as px
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestRegressor
-
+import seaborn as sns
+import matplotlib.pyplot as plt
+import plotly.express as px
 # -----------------------------------------
 # PAGE CONFIG
 # -----------------------------------------
@@ -154,3 +156,67 @@ if st.button("🔍 Generate Personalized Health & Policy Report"):
 
     # Business Insight Recommendation
     st.info(f"💡 **Recommendation:** Based on your **{category}** fitness level, you qualify for high-tier wellness discounts.")
+
+
+
+import streamlit as st
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+import plotly.express as px
+
+# ... (Previous code for data loading and model training remains the same) ...
+
+if st.button("🔍 Generate Personalized Recommendation"):
+    # ... (Previous calculation logic) ...
+
+    # 1. FITNESS SCORE DISTRIBUTION (Visualization 5 from your file)
+    st.subheader("📊 Population Wellness Landscape")
+    fig_dist, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 8))
+    
+    # Histogram with KDE
+    sns.histplot(fitness_df['Claim Amount'], kde=True, bins=25, ax=ax1, color='#3498db')
+    ax1.set_title('Risk Distribution Profile', fontsize=16, fontweight='bold')
+    
+    # Policy Distribution Pie Chart
+    policy_counts = base_df['insurance'].value_counts()
+    ax2.pie(policy_counts.values, labels=policy_counts.index, autopct='%1.1f%%', shadow=True)
+    ax2.set_title('Overall Policy Distribution', fontsize=16, fontweight='bold')
+    
+    # IMPORTANT: Use st.pyplot instead of plt.show()
+    st.pyplot(fig_dist)
+
+    # 2. INTERACTIVE 3D HEALTH UNIVERSE (Visualization 4 from your file)
+    st.subheader("🌟 3D Health Universe")
+    st.caption("Exploring your position in the multidimensional wellness space")
+    
+    # Create the 3D Scatter
+    fig_3d = px.scatter_3d(
+        fitness_df.sample(300), # Sampling for performance
+        x='Age', 
+        y='BMI', 
+        z='Steps Taken',
+        color='Stress Levels', 
+        size='Heart Beats',
+        color_continuous_scale='Viridis',
+        title='Multidimensional Wellness Mapping'
+    )
+    
+    # IMPORTANT: Use st.plotly_chart instead of fig.show()
+    st.plotly_chart(fig_3d, use_container_width=True)
+
+    # 3. FITNESS TRENDS BY AGE (Visualization 6 from your file)
+    st.subheader("📈 Fitness Trends Across Life Stages")
+    fig_age, ax_age = plt.subplots(figsize=(10, 6))
+    
+    # Create Age Groups like in your script
+    fitness_df['Age Group'] = pd.cut(fitness_df['Age'], bins=[18, 30, 45, 60, 100], 
+                                    labels=['18-29', '30-44', '45-59', '60+'])
+    
+    sns.boxplot(x='Age Group', y='Steps Taken', data=fitness_df, palette='viridis', ax=ax_age)
+    ax_age.set_title('Activity Level (Steps) by Age Group', fontsize=14)
+    
+    st.pyplot(fig_age)
+
+    st.info("💡 **Insight:** Your recommendation is based on lifestyle markers and regional policy data.")
