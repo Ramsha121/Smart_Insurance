@@ -25,10 +25,10 @@ st.markdown("""
 <style>
 .big-title {font-size:42px; font-weight:800; color:#0f4c75;}
 .sub-title {font-size:18px; color:#3282b8;}
-.card {
+.metric-card {
     background:white;
-    padding:20px;
-    border-radius:15px;
+    padding:15px;
+    border-radius:12px;
     box-shadow:0px 4px 12px rgba(0,0,0,0.1);
 }
 </style>
@@ -93,22 +93,22 @@ def discount(score):
     else: return 0
 
 def category(score):
-    if score >= 80: return "🏆 Elite"
-    elif score >= 65: return "💪 Excellent"
-    elif score >= 50: return "✅ Good"
-    elif score >= 35: return "⚡ Fair"
-    else: return "🔄 Needs Improvement"
+    if score >= 80: return "Elite"
+    elif score >= 65: return "Excellent"
+    elif score >= 50: return "Good"
+    elif score >= 35: return "Fair"
+    else: return "Needs Improvement"
 
 def plan(d):
-    if d >= 25: return "🌟 Premium Wellness Plan"
-    elif d >= 15: return "💼 Standard Health Plan"
-    elif d >= 5: return "🔰 Basic Fitness Cover"
-    else: return "🛡️ Essential Protection"
+    if d >= 25: return "Premium Wellness Plan"
+    elif d >= 15: return "Standard Health Plan"
+    elif d >= 5: return "Basic Fitness Cover"
+    else: return "Essential Protection"
 
 # -----------------------------------------
 # HEADER
 # -----------------------------------------
-st.markdown("<div class='big-title'>💙 Smart Fitness Insurance</div>", unsafe_allow_html=True)
+st.markdown("<div class='big-title'>Smart Fitness Insurance</div>", unsafe_allow_html=True)
 st.markdown("<div class='sub-title'>Personalized wellness, smarter insurance</div>", unsafe_allow_html=True)
 st.divider()
 
@@ -126,13 +126,10 @@ member = st.radio(
 # =========================================
 if member == "Yes":
 
-    st.subheader("👤 Member Details")
+    st.subheader("Member Details")
 
-    colA, colB = st.columns(2)
-    with colA:
-        name = st.selectbox("Select Name", df["Name"].unique())
-    with colB:
-        age = st.slider("Age", 18, 80, 30)
+    name = st.selectbox("Select Name", df["Name"].unique())
+    age = st.slider("Age", 18, 80, 30)
 
     user_row = df[(df["Name"] == name) & (df["Age"].round() == age)]
 
@@ -141,34 +138,29 @@ if member == "Yes":
         score = model.predict(features)[0]
         disc = discount(score)
 
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("🏃 Fitness Score", f"{score:.2f}")
-        c2.metric("🎁 Discount", f"{disc}%")
-        c3.metric("🏅 Category", category(score))
-        c4.metric("📜 Plan", plan(disc))
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Fitness Score", f"{score:.2f}")
+        col2.metric("Discount", f"{disc}%")
+        col3.metric("Category", category(score))
+        col4.metric("Plan", plan(disc))
 
-        st.success(f"🎉 Congratulations **{name}**! You fall under **{category(score)}** category.")
+        st.success(f"Congratulations {name}! You are in the **{category(score)}** category.")
 
         # ---------------------------------
-        # ANALYTICS
+        # GRAPHS
         # ---------------------------------
-        st.subheader("📊 Your Fitness Analytics")
+        st.subheader("Your Fitness Analytics")
 
         fig1 = px.histogram(
-            df,
-            x="Fitness Score",
-            nbins=30,
-            title="Overall Fitness Score Distribution"
+            df, x="Fitness Score",
+            title="Fitness Score Distribution"
         )
 
-        fig2 = px.scatter_3d(
-            df,
-            x="Age",
-            y="BMI",
-            z="Steps Taken",
+        fig2 = px.scatter(
+            df, x="Age", y="BMI",
             color="Fitness Score",
-            hover_name="Name",
-            title="Age vs BMI vs Steps"
+            title="Age vs BMI (Fitness Impact)",
+            hover_name="Name"
         )
 
         st.plotly_chart(fig1, use_container_width=True)
@@ -178,11 +170,11 @@ if member == "Yes":
         # RECOMMENDATIONS
         # ---------------------------------
         st.info(
-            "💡 **Personalized Health Tips**\n\n"
+            "Personalized Recommendations:\n"
             "- Maintain consistent daily steps\n"
-            "- Improve sleep duration & quality\n"
-            "- Practice stress management techniques\n"
-            "- Stay hydrated and active"
+            "- Improve sleep quality and duration\n"
+            "- Reduce stress using fitness or meditation\n"
+            "- Stay active to unlock higher insurance discounts"
         )
 
         # ---------------------------------
@@ -192,12 +184,12 @@ if member == "Yes":
 SMART FITNESS INSURANCE CERTIFICATE
 ----------------------------------
 
-Name             : {name}
-Age              : {age}
-Fitness Score    : {score:.2f}/100
-Fitness Category : {category(score)}
-Insurance Plan   : {plan(disc)}
-Discount Earned  : {disc}%
+Name              : {name}
+Age               : {age}
+Fitness Score     : {score:.2f}/100
+Fitness Category  : {category(score)}
+Insurance Plan    : {plan(disc)}
+Discount Earned   : {disc}%
 
 Issued by:
 Smart Fitness Insurance
@@ -206,20 +198,16 @@ Phone: 9812335644
 """
 
         st.download_button(
-            label="📥 Download Fitness Certificate",
-            data=certificate_text,
-            file_name="fitness_certificate.txt",
-            mime="text/plain"
+            "Download Fitness Certificate",
+            certificate_text,
+            file_name="fitness_certificate.txt"
         )
-
-    else:
-        st.warning("⚠️ No matching record found for selected age.")
 
 # =========================================
 # NON-MEMBER FLOW
 # =========================================
 else:
-    st.subheader("🧾 New Customer Details")
+    st.subheader("New Customer Details")
 
     name = st.text_input("Name")
     age = st.slider("Age", 18, 80, 30)
@@ -227,27 +215,19 @@ else:
         "Income Range",
         ["<5 LPA", "5–10 LPA", "10–20 LPA", "20+ LPA"]
     )
+
     habits = st.multiselect(
-        "Bad Habits (if any)",
+        "Lifestyle Habits",
         ["Smoking", "Alcohol", "Sedentary Lifestyle", "None"]
     )
 
-    st.subheader("💡 Recommended Insurance Plans")
+    st.subheader("Recommended Plans")
 
     st.markdown("""
-    ✔ **Basic Fitness Cover** – Affordable, essential protection  
-    ✔ **Standard Health Plan** – Balanced coverage + rewards  
-    ✔ **Premium Wellness Plan** – Full fitness & medical benefits  
+    **Basic Fitness Cover** – Entry-level health protection  
+    **Standard Health Plan** – Balanced coverage with rewards  
+    **Premium Wellness Plan** – Full health + fitness benefits  
     """)
-
-# -----------------------------------------
-# CONTACT
-# -----------------------------------------
-st.info(
-    "📞 **Get in touch with us**\n\n"
-    "Email: mail@insurance.gmail.com\n\n"
-    "Phone: 9812335644"
-)
 
 # -----------------------------------------
 # FOOTER
