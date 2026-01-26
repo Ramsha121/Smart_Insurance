@@ -1,7 +1,6 @@
-# ============================================================
+# ======================================================
 # 🤖 INTELLIGENT INSURANCE POLICY RECOMMENDATION SYSTEM
-# STREAMLIT VERSION
-# ============================================================
+# ======================================================
 
 import streamlit as st
 import pandas as pd
@@ -9,59 +8,65 @@ import numpy as np
 import plotly.express as px
 
 from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report, accuracy_score
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, classification_report
 
-st.sidebar.header("📂 Upload Dataset")
-uploaded_file = st.sidebar.file_uploader(
-    "Upload insurance_dataset.csv",
-    type=["csv"]
-)
-
-
-# ------------------------------------------------------------
+# ------------------------------------------------------
 # PAGE CONFIG
-# ------------------------------------------------------------
+# ------------------------------------------------------
 st.set_page_config(
     page_title="Intelligent Insurance Recommendation",
     page_icon="🤖",
     layout="wide"
 )
 
-# ------------------------------------------------------------
-# CUSTOM STYLING
-# ------------------------------------------------------------
+# ------------------------------------------------------
+# THEME
+# ------------------------------------------------------
 st.markdown("""
 <style>
-.big-title {font-size:38px; font-weight:800; color:#0f4c75;}
+.big-title {font-size:42px; font-weight:800; color:#0f4c75;}
 .sub-title {font-size:18px; color:#3282b8;}
 .card {
-    background:#ffffff;
+    background:white;
     padding:20px;
-    border-radius:16px;
-    box-shadow:0 6px 18px rgba(0,0,0,0.1);
+    border-radius:15px;
+    box-shadow:0px 4px 12px rgba(0,0,0,0.08);
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ------------------------------------------------------------
+# ------------------------------------------------------
 # HEADER
-# ------------------------------------------------------------
-st.markdown("<div class='big-title'>🤖 Intelligent Insurance Recommendation System</div>", unsafe_allow_html=True)
-st.markdown("<div class='sub-title'>Machine Learning powered policy selection & business insights</div>", unsafe_allow_html=True)
+# ------------------------------------------------------
+st.markdown("<div class='big-title'>🤖 Intelligent Insurance Policy Recommendation</div>", unsafe_allow_html=True)
+st.markdown("<div class='sub-title'>Machine Learning powered insurance decision system</div>", unsafe_allow_html=True)
 st.divider()
 
-# ------------------------------------------------------------
-# LOAD + PREPROCESS DATA
-# ------------------------------------------------------------
+# ------------------------------------------------------
+# FILE UPLOADER (CRITICAL FIX)
+# ------------------------------------------------------
+st.sidebar.header("📂 Upload Dataset")
+uploaded_file = st.sidebar.file_uploader(
+    "Upload insurance_dataset.csv",
+    type=["csv"]
+)
+
+if uploaded_file is None:
+    st.warning("👈 Please upload the **insurance_dataset.csv** file to continue.")
+    st.stop()
+
+# ------------------------------------------------------
+# LOAD & PREPARE DATA
+# ------------------------------------------------------
 @st.cache_data
-def load_and_prepare_data():
-    df = pd.read_csv("insurance_dataset.csv")
+def load_and_prepare_data(file):
+    df = pd.read_csv(file)
 
     raw_count = df.shape[0]
     df = df.dropna()
-    cleaned_count = df.shape[0]
+    clean_count = df.shape[0]
 
     df["age_in_years"] = (df["age_in_days"] / 365).round(0)
 
@@ -97,173 +102,124 @@ def load_and_prepare_data():
     X = df[features]
     y = df["insurance"]
 
-    return df, X, y, encoders, raw_count, cleaned_count
+    return df, X, y, encoders, raw_count, clean_count
 
-df, X, y, encoders, raw_n, clean_n = load_and_prepare_data()
+df, X, y, encoders, raw_n, clean_n = load_and_prepare_data(uploaded_file)
 
-# ------------------------------------------------------------
-# MODEL TRAINING
-# ------------------------------------------------------------
+# ------------------------------------------------------
+# DATA SUMMARY
+# ------------------------------------------------------
+st.subheader("📊 Dataset Overview")
+st.write(f"**Raw Records:** {raw_n}")
+st.write(f"**Clean Records:** {clean_n}")
+st.write(f"**Insurance Policies:** {df['insurance'].unique().tolist()}")
+
+# ------------------------------------------------------
+# TRAIN MODEL
+# ------------------------------------------------------
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42, stratify=y
 )
 
 model = RandomForestClassifier(
     n_estimators=200,
-    class_weight="balanced",
-    random_state=42
+    random_state=42,
+    class_weight="balanced"
 )
 model.fit(X_train, y_train)
 
-accuracy = accuracy_score(y_test, model.predict(X_test))
+y_pred = model.predict(X_test)
+acc = accuracy_score(y_test, y_pred)
 
-# ------------------------------------------------------------
-# DATASET OVERVIEW
-# ------------------------------------------------------------
-with st.expander("📊 Dataset Overview", expanded=True):
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Total Records", raw_n)
-    col2.metric("After Cleaning", clean_n)
-    col3.metric("Model Accuracy", f"{accuracy:.2%}")
+st.success(f"🤖 Model trained successfully | Accuracy: **{acc:.2%}**")
 
-    st.write("### Insurance Policy Distribution")
-    policy_dist = df["insurance"].value_counts().reset_index()
-    policy_dist.columns = ["Policy", "Customers"]
-    st.plotly_chart(px.pie(
-        policy_dist,
-        names="Policy",
-        values="Customers",
-        hole=0.4
-    ), use_container_width=True)
-
-# ------------------------------------------------------------
+# ------------------------------------------------------
 # FEATURE IMPORTANCE
-# ------------------------------------------------------------
-st.subheader("🔍 Feature Importance Analysis")
-imp_df = pd.DataFrame({
+# ------------------------------------------------------
+st.subheader("🔍 Feature Importance")
+feat_imp = pd.DataFrame({
     "Feature": X.columns,
     "Importance": model.feature_importances_
 }).sort_values(by="Importance", ascending=False)
 
-st.plotly_chart(
-    px.bar(
-        imp_df.head(10),
-        x="Importance",
-        y="Feature",
-        orientation="h"
-    ),
-    use_container_width=True
+fig_imp = px.bar(
+    feat_imp.head(10),
+    x="Importance",
+    y="Feature",
+    orientation="h",
+    title="Top 10 Important Features"
 )
+st.plotly_chart(fig_imp, use_container_width=True)
 
-# ------------------------------------------------------------
-# USER INTERACTION
-# ------------------------------------------------------------
+# ------------------------------------------------------
+# USER INPUT
+# ------------------------------------------------------
 st.divider()
-st.subheader("💬 Insurance Policy Recommendation")
+st.subheader("💬 Interactive Insurance Recommendation")
 
-member = st.radio("Are you an existing customer?", ["Yes", "No"], horizontal=True)
+occupation_list = encoders["occupation"].classes_.tolist()
+occupation = st.selectbox("Select Occupation", occupation_list)
 
-occupations = sorted(df["occupation"].unique())
+age = st.slider("Age (years)", 18, 100, 35)
+income = st.number_input("Annual Income (₹)", min_value=20000, value=300000)
 
-if member == "Yes":
-    name = st.selectbox("Select Customer Name", sorted(df["name"].unique()))
-    user_row = df[df["name"] == name].iloc[0]
+# ------------------------------------------------------
+# PREDICTION
+# ------------------------------------------------------
+if st.button("🎯 Recommend Insurance Policy"):
 
-    st.info(f"""
-    **Customer Profile**
-    • Age: {int(user_row['age_in_years'])}  
-    • Occupation: {user_row['occupation']}  
-    • Income: ₹{int(user_row['Income']):,}
-    """)
+    occ_enc = encoders["occupation"].transform([occupation])[0]
 
-    user_features = X.loc[user_row.name:user_row.name]
-    probs = model.predict_proba(user_features)[0]
-    classes = model.classes_
+    sample = X.mean().to_frame().T
+    sample["age_in_years"] = age
+    sample["Income"] = income
+    sample["occupation_encoded"] = occ_enc
 
-else:
-    age = st.slider("Age", 18, 80, 30)
-    occupation = st.selectbox("Occupation", occupations)
+    probs = model.predict_proba(sample)[0]
+    policies = model.classes_
 
-    occ_income = df[df["occupation"] == occupation]["Income"]
-    suggested_income = int(occ_income.mean())
+    result_df = pd.DataFrame({
+        "Policy": policies,
+        "Confidence (%)": np.round(probs * 100, 2)
+    }).sort_values(by="Confidence (%)", ascending=False)
 
-    income = st.number_input(
-        "Annual Income",
-        min_value=10000,
-        value=suggested_income,
-        step=10000
-    )
+    best_policy = result_df.iloc[0]["Policy"]
 
-    premium = int(income * 0.05)
+    st.success(f"🏆 **Recommended Policy:** {best_policy}")
 
-    user_input = {
-        "age_in_years": age,
-        "Income": income,
-        "premium": premium,
-        "no_of_premiums_paid": 5,
-        "perc_premium_paid_by_cash_credit": 50,
-        "application_underwriting_score": 70,
-        "occupation_encoded": encoders["occupation"].transform([occupation])[0],
-        "sourcing_channel_encoded": 0,
-        "residence_area_type_encoded": 0,
-        "Occupation_Type_encoded": 0,
-        "Count_3-6_months_late": 0,
-        "Count_6-12_months_late": 0,
-        "Count_more_than_12_months_late": 0
-    }
-
-    user_df = pd.DataFrame([user_input])
-    probs = model.predict_proba(user_df)[0]
-    classes = model.classes_
-
-# ------------------------------------------------------------
-# RESULTS
-# ------------------------------------------------------------
-results = pd.DataFrame({
-    "Policy": classes,
-    "Confidence (%)": probs * 100
-}).sort_values(by="Confidence (%)", ascending=False)
-
-best_policy = results.iloc[0]
-
-st.success(f"🏆 **Recommended Policy:** {best_policy['Policy']} ({best_policy['Confidence (%)']:.2f}%)")
-
-st.write("### 🔎 Prediction Confidence")
-st.plotly_chart(
-    px.bar(
-        results,
+    # Confidence bar chart
+    fig_prob = px.bar(
+        result_df,
         x="Policy",
         y="Confidence (%)",
-        color="Policy"
-    ),
-    use_container_width=True
-)
+        title="Prediction Confidence for All Policies",
+        color="Confidence (%)"
+    )
+    st.plotly_chart(fig_prob, use_container_width=True)
 
-# ------------------------------------------------------------
-# POLICY INSIGHTS
-# ------------------------------------------------------------
-st.subheader(f"📋 Insights for {best_policy['Policy']}")
+    # Alternatives
+    st.subheader("📋 Alternative Options")
+    st.dataframe(result_df)
 
-policy_df = df[df["insurance"] == best_policy["Policy"]]
-
-col1, col2, col3 = st.columns(3)
-col1.metric("Customers", policy_df.shape[0])
-col2.metric("Avg Premium", f"₹{int(policy_df['premium'].mean()):,}")
-col3.metric("Avg Income", f"₹{int(policy_df['Income'].mean()):,}")
-
-st.write("### 👔 Top Occupations")
-occ_dist = policy_df["occupation"].value_counts().head(5)
-st.plotly_chart(
-    px.bar(
-        occ_dist,
-        x=occ_dist.index,
-        y=occ_dist.values
-    ),
-    use_container_width=True
-)
-
-# ------------------------------------------------------------
-# FOOTER
-# ------------------------------------------------------------
+# ------------------------------------------------------
+# BUSINESS INSIGHTS
+# ------------------------------------------------------
 st.divider()
-st.caption("© 2026 Intelligent Insurance Recommendation System | ML + Business Intelligence")
+st.subheader("📈 Business Intelligence Dashboard")
+
+policy_dist = df["insurance"].value_counts().reset_index()
+policy_dist.columns = ["Policy", "Customers"]
+
+fig_dist = px.pie(
+    policy_dist,
+    names="Policy",
+    values="Customers",
+    title="Insurance Policy Distribution"
+)
+st.plotly_chart(fig_dist, use_container_width=True)
+
+# ------------------------------------------------------
+# FOOTER
+# ------------------------------------------------------
+st.divider()
+st.caption("© 2026 Intelligent Insurance Recommendation System | ML + Analytics")
