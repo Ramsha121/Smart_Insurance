@@ -13,6 +13,13 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, accuracy_score
 
+st.sidebar.header("📂 Upload Dataset")
+uploaded_file = st.sidebar.file_uploader(
+    "Upload insurance_dataset.csv",
+    type=["csv"]
+)
+
+
 # ------------------------------------------------------------
 # PAGE CONFIG
 # ------------------------------------------------------------
