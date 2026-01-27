@@ -1,224 +1,206 @@
+# =========================================
+# SMART FITNESS INSURANCE – STREAMLIT APP
+# =========================================
+
 import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-import plotly.graph_objects as go
-import seaborn as sns
-import matplotlib.pyplot as plt
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestRegressor
 
-# Page Configuration
-st.set_page_config(page_title="Insurance Recommendation System", layout="wide", page_icon="🎯")
+# -----------------------------------------
+# PAGE CONFIG
+# -----------------------------------------
+st.set_page_config(
+    page_title="Smart Fitness Insurance",
+    page_icon="💙",
+    layout="wide"
+)
 
-# --- CUSTOM CSS ---
-st.markdown("""
-    <style>
-    .main { background-color: #f8f9fa; }
-    .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    .insight-box { background-color: #e3f2fd; padding: 20px; border-radius: 10px; border-left: 5px solid #2196f3; margin-bottom: 20px; }
-    h1, h2, h3 { color: #2c3e50; }
-    </style>
-""", unsafe_allow_stdio=True)
+# -----------------------------------------
+# DATA SOURCE (RAW GITHUB)
+# -----------------------------------------
+DATA_URL = "https://raw.githubusercontent.com/Ramsha121/Smart_Insurance/data/base_plans.csv"
 
-# --- DATA LOADING & PREPROCESSING ---
+# -----------------------------------------
+# LOAD & TRAIN MODEL (SAFE)
+# -----------------------------------------
 @st.cache_data
-def load_and_preprocess_data():
-    # Load dataset (adjust path as needed)
-    try:
-        df = pd.read_csv("base_plans.csv")
-    except FileNotFoundError:
-        # Fallback dummy data generation if file not found for demonstration
-        st.error("Dataset 'base_plans.csv' not found. Please ensure it's in the directory.")
-        return None
+def load_and_train():
+    df = pd.read_csv(DATA_URL)
 
-    # Preprocessing logic from your script
-    df.dropna(inplace=True)
-    cols_to_drop = ['perc_premium_paid_by_cash_credit','Count_3-6_months_late','Count_6-12_months_late',
-                    'Count_more_than_12_months_late','application_underwriting_score','target',
-                    'sourcing_channel','residence_area_type']
-    df.drop([c for c in cols_to_drop if c in df.columns], axis=1, inplace=True)
-    
-    # Feature Engineering
-    df['age_in_years'] = df['age_in_days'] // 365
-    
-    # Randomly assign occupations for analysis (as per original script)
-    np.random.seed(42)
-    occupations = ['Engineer', 'Doctor', 'Teacher', 'Clerk', 'Manager', 'Laborer', 'Mechanic', 'Driver']
-    df['occupation'] = np.random.choice(occupations, size=len(df))
-    df['job_type'] = df['occupation'].apply(lambda x: 'White-collar' if x in ['Engineer', 'Doctor', 'Teacher', 'Manager'] else 'Blue-collar')
-    
-    # Policy Allocation Logic
-    df['policy'] = 'LIC'
-    df.loc[(df['age_in_years'] >= 18) & (df['Income'] > 50000), 'policy'] = 'StarLite'
-    df.loc[(df['age_in_years'] >= 18) & (df['Income'] <= 50000), 'policy'] = 'Maxbupa'
-    
-    return df
+    # 🔒 Normalize column names (CRITICAL FIX)
+    df.columns = df.columns.str.strip()
 
-# --- MODEL TRAINING ---
-@st.cache_resource
-def train_model(df):
-    le_occ = LabelEncoder()
-    df_train = df.copy()
-    df_train['occ_enc'] = le_occ.fit_transform(df_train['occupation'])
-    
-    X = df_train[['age_in_years', 'occ_enc', 'Income']]
-    y = df_train['policy']
-    
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    model = RandomForestClassifier(n_estimators=100, random_state=42)
-    model.fit(X_train, y_train)
-    
-    acc = accuracy_score(y_test, model.predict(X_test))
-    return model, le_occ, acc
+    REQUIRED_FEATURES = [
+        "Age",
+        "Blood Pressure (Systolic)",
+        "Blood Pressure (Diastolic)",
+        "Heart Beats",
+        "BMI",
+        "Cholesterol",
+        "Steps Taken",
+        "Active Minutes",
+        "Sleep Duration",
+        "Sleep Quality",
+        "VO2 Max",
+        "Calories Burned",
+        "SpO2 Levels",
+        "Stress Levels"
+    ]
 
-# Load Data
-df = load_and_preprocess_data()
+    TARGET = "Claim Amount"
 
-if df is not None:
-    model, le_occ, accuracy = train_model(df)
+    # ✅ Validate columns
+    missing = [c for c in REQUIRED_FEATURES + [TARGET] if c not in df.columns]
+    if missing:
+        st.error("❌ Dataset column mismatch detected")
+        st.write("Missing columns:", missing)
+        st.write("Available columns:", list(df.columns))
+        st.stop()
 
-    # --- SIDEBAR: USER INPUTS ---
-    st.sidebar.header("🎯 Personal Recommendation")
-    user_name = st.sidebar.text_input("Customer Name", "John Doe")
-    user_age = st.sidebar.slider("Select Age", 1, 100, 30)
-    user_income = st.sidebar.number_input("Annual Income (₹)", min_value=1000, value=75000, step=5000)
-    user_occ = st.sidebar.selectbox("Occupation", le_occ.classes_)
+    X = df[REQUIRED_FEATURES]
+    y = df[TARGET]
 
-    if st.sidebar.button("Predict Best Policy"):
-        occ_enc = le_occ.transform([user_occ])[0]
-        prediction = model.predict([[user_age, occ_enc, user_income]])[0]
-        
-        st.sidebar.success(f"Recommended: **{prediction}**")
-        st.sidebar.info(f"Model Accuracy: {accuracy*100:.2f}%")
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
 
-    # --- MAIN CONTENT ---
-    st.title("🏢 Insurance Intelligence Dashboard")
-    st.markdown("---")
+    model = RandomForestRegressor(
+        n_estimators=150,
+        random_state=42
+    )
+    model.fit(X_scaled, y)
 
-    # KEY METRICS ROW
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Total Customers", f"{len(df):,}")
-    m2.metric("Total Revenue", f"₹{df['premium'].sum():,.0f}")
-    m3.metric("Avg Customer Value", f"₹{df['premium'].mean():,.0f}")
-    m4.metric("Retention Proxy", f"{df['no_of_premiums_paid'].mean():.2f} pmts")
+    return df, model, scaler, REQUIRED_FEATURES
 
-    # TABS FOR ANALYSIS
-    tab1, tab2, tab3 = st.tabs(["📊 Visual Analytics", "💼 Business Insights", "🔍 Model Performance"])
+df, model, scaler, FEATURES = load_and_train()
 
-    with tab1:
-        # VISUALIZATION 1
-        st.subheader("📊 VISUALIZATION 1: INCOME-AGE RELATIONSHIP WITH POLICY SEGMENTATION")
-        fig1 = px.scatter(df, x="age_in_years", y="Income", color="policy", 
-                         size="premium", hover_data=['occupation'],
-                         title="Age vs Income by Policy Type",
-                         color_discrete_sequence=px.colors.qualitative.Pastel)
-        st.plotly_chart(fig1, use_container_width=True)
-        
-        # Personalized Insights 1
-        income_age_corr = df['Income'].corr(df['age_in_years'])
-        st.markdown(f"""
-        <div class="insight-box">
-        <b>🔍 INCOME-AGE RELATIONSHIP INSIGHTS:</b><br>
-        • Correlation coefficient: {income_age_corr:.3f}<br>
-        • Weak correlation - Age and income are largely independent<br>
-        • <b>StarLite:</b> Avg Age {df[df['policy']=='StarLite']['age_in_years'].mean():.1f}y, Avg Income ₹{df[df['policy']=='StarLite']['Income'].mean():,.0f}<br>
-        • <b>Maxbupa:</b> Avg Age {df[df['policy']=='Maxbupa']['age_in_years'].mean():.1f}y, Avg Income ₹{df[df['policy']=='Maxbupa']['Income'].mean():,.0f}
-        </div>
-        """, unsafe_allow_stdio=True)
+# -----------------------------------------
+# FITNESS LOGIC
+# -----------------------------------------
+def fitness_score(u):
+    score = (
+        0.12 * u["Steps Taken"] +
+        0.10 * u["Active Minutes"] +
+        0.10 * u["Sleep Duration"] +
+        0.08 * u["Sleep Quality"] +
+        0.10 * u["VO2 Max"] +
+        0.10 * u["SpO2 Levels"] -
+        0.15 * u["Stress Levels"] -
+        0.08 * u["BMI"]
+    )
+    return float(np.clip(score, 0, 100))
 
-        # VISUALIZATION 2
-        st.subheader("📊 VISUALIZATION 2: COMPREHENSIVE FEATURE RELATIONSHIPS")
-        fig2 = px.scatter_matrix(df, dimensions=['age_in_years', 'Income', 'premium', 'no_of_premiums_paid'],
-                                color='policy', title="Multi-Dimensional Feature Matrix")
-        st.plotly_chart(fig2, use_container_width=True)
-        st.markdown("""
-        <div class="insight-box">
-        <b>🔍 FEATURE RELATIONSHIP INSIGHTS:</b><br>
-        • Strongest features for segmentation: Income and Premium Amount.<br>
-        • Policy boundaries are clearly defined by Income thresholds (₹50k limit).
-        </div>
-        """, unsafe_allow_stdio=True)
+def category(score):
+    if score >= 80: return "Elite"
+    elif score >= 65: return "Excellent"
+    elif score >= 50: return "Good"
+    elif score >= 35: return "Fair"
+    else: return "Needs Improvement"
 
-        # VISUALIZATION 3
-        st.subheader("📊 VISUALIZATION 3: INTERACTIVE OCCUPATION HIERARCHY")
-        fig3 = px.sunburst(df, path=['job_type', 'occupation'], values='premium',
-                          color='job_type', color_discrete_map={'White-collar':'#3498db', 'Blue-collar':'#e74c3c'})
-        st.plotly_chart(fig3, use_container_width=True)
-        
-        # Occupation Stats
-        occ_stats = df.groupby('occupation').agg({'Income':'mean', 'premium':'mean', 'policy':lambda x: x.mode()[0]})
-        st.markdown("<b>🔍 OCCUPATION DISTRIBUTION INSIGHTS:</b>", unsafe_allow_stdio=True)
-        st.table(occ_stats.style.format({'Income': '₹{:,.0f}', 'premium': '₹{:,.0f}'}))
+def plan(score):
+    if score >= 75: return "Starlite Premium"
+    elif score >= 60: return "Starlite Basic"
+    elif score >= 45: return "MaxBupa Silver"
+    else: return "MaxBupa Gold"
 
-        # VISUALIZATION 4
-        st.subheader("📊 VISUALIZATION 4: ADVANCED CORRELATION MATRIX")
-        numeric_df = df.select_dtypes(include=[np.number])
-        corr = numeric_df.corr()
-        fig4 = go.Figure(data=go.Heatmap(z=corr.values, x=corr.columns, y=corr.columns, 
-                                       colorscale='RdBu_r', zmin=-1, zmax=1))
-        fig4.update_layout(title="Feature Correlation Heatmap")
-        st.plotly_chart(fig4, use_container_width=True)
-        
-        st.markdown(f"""
-        <div class="insight-box">
-        <b>🔍 CORRELATION MATRIX INSIGHTS:</b><br>
-        • Income ↔ Premium: {corr.loc['Income', 'premium']:.3f} (Significant positive link)<br>
-        • Age ↔ Premium: {corr.loc['age_in_days', 'premium']:.3f} (Minimal relationship)
-        </div>
-        """, unsafe_allow_stdio=True)
+# -----------------------------------------
+# HEADER
+# -----------------------------------------
+st.title("💙 Smart Fitness Insurance")
+st.caption("Health-driven personalized insurance intelligence")
+st.divider()
 
-        # VISUALIZATION 5
-        st.subheader("📊 VISUALIZATION 5: COMPREHENSIVE PREMIUM ANALYSIS")
-        fig5 = px.box(df, x="policy", y="premium", color="job_type", points="all",
-                     title="Premium Distribution by Policy and Job Type")
-        st.plotly_chart(fig5, use_container_width=True)
-        st.markdown(f"""
-        <div class="insight-box">
-        <b>🔍 PREMIUM PAYMENT INSIGHTS:</b><br>
-        • Average premiums paid: {df['no_of_premiums_paid'].mean():.1f}<br>
-        • Median premiums paid: {df['no_of_premiums_paid'].median():.1f}<br>
-        • <b>StarLite:</b> Average Premium ₹{df[df['policy']=='StarLite']['premium'].mean():,.0f}
-        </div>
-        """, unsafe_allow_stdio=True)
+# =========================================
+# USER INPUT
+# =========================================
+st.subheader("🧍 Enter Your Health Details")
 
-    with tab2:
-        st.header("📊 ADVANCED BUSINESS INSIGHTS")
-        
-        col_ins1, col_ins2 = st.columns(2)
-        
-        with col_ins1:
-            st.markdown("### 🔍 POLICY DISTRIBUTION BY JOB TYPE")
-            ct = pd.crosstab(df['job_type'], df['policy'], margins=True)
-            st.dataframe(ct)
-            
-            st.markdown("### 🔍 JOB TYPE POLICY PREFERENCES")
-            for job in df['job_type'].unique():
-                subset = df[df['job_type']==job]
-                pref = subset['policy'].mode()[0]
-                pct = (subset['policy']==pref).mean()*100
-                st.write(f"• **{job} workers:** Preferred policy: {pref} ({pct:.1f}%)")
+c1, c2, c3 = st.columns(3)
 
-        with col_ins2:
-            st.markdown("### 📊 OCCUPATION-WISE INCOME ANALYSIS")
-            occ_income = df.groupby('occupation')['Income'].agg(['mean', 'median', 'count']).sort_values(by='mean', ascending=False)
-            st.dataframe(occ_income.style.format({'mean': '₹{:,.0f}', 'median': '₹{:,.0f}'}))
-            
-            st.markdown("### 📈 REVENUE PER POLICY TYPE")
-            rev = df.groupby('policy')['premium'].sum()
-            st.bar_chart(rev)
+with c1:
+    age = st.slider("Age", 18, 100, 30)
+    bmi = st.number_input("BMI", 10.0, 50.0, 24.0)
+    sys = st.number_input("BP Systolic", 90, 200, 120)
+    dia = st.number_input("BP Diastolic", 60, 130, 80)
 
-    with tab3:
-        st.header("🤖 Machine Learning Model Details")
-        st.write(f"The system uses a **Random Forest Classifier** with **{accuracy*100:.2f}% accuracy** to predict policy eligibility based on customer demographics.")
-        
-        # Feature Importance
-        importances = model.feature_importances_
-        feat_importances = pd.Series(importances, index=['Age', 'Occupation', 'Income'])
-        fig_imp = px.bar(feat_importances, title="Feature Importance in Policy Recommendation")
-        st.plotly_chart(fig_imp)
+with c2:
+    heart = st.number_input("Heart Beats", 40, 200, 72)
+    chol = st.number_input("Cholesterol", 100, 400, 180)
+    spo2 = st.number_input("SpO2 Levels", 85, 100, 98)
+    stress = st.slider("Stress Levels", 0, 100, 30)
 
-    st.markdown("---")
-    st.markdown("🎉 **COMPREHENSIVE INSURANCE ANALYSIS COMPLETED!**")
+with c3:
+    steps = st.number_input("Steps Taken", 0, 40000, 8000)
+    active = st.number_input("Active Minutes", 0, 300, 45)
+    sleep = st.number_input("Sleep Duration (hrs)", 0.0, 12.0, 7.0)
+    sleep_q = st.slider("Sleep Quality", 0, 100, 70)
+    vo2 = st.number_input("VO2 Max", 10.0, 80.0, 40.0)
+    calories = st.number_input("Calories Burned", 500, 6000, 2200)
+
+# =========================================
+# PREDICTION
+# =========================================
+if st.button("🔍 Get Personalized Recommendation"):
+
+    user = {
+        "Age": age,
+        "Blood Pressure (Systolic)": sys,
+        "Blood Pressure (Diastolic)": dia,
+        "Heart Beats": heart,
+        "BMI": bmi,
+        "Cholesterol": chol,
+        "Steps Taken": steps,
+        "Active Minutes": active,
+        "Sleep Duration": sleep,
+        "Sleep Quality": sleep_q,
+        "VO2 Max": vo2,
+        "Calories Burned": calories,
+        "SpO2 Levels": spo2,
+        "Stress Levels": stress
+    }
+
+    user_df = pd.DataFrame([user])
+    user_scaled = scaler.transform(user_df[FEATURES])
+
+    claim = model.predict(user_scaled)[0]
+    score = fitness_score(user)
+
+    st.divider()
+    st.subheader("🎯 Personalized Results")
+
+    a, b, c, d = st.columns(4)
+    a.metric("Fitness Score", f"{score:.2f}")
+    b.metric("Category", category(score))
+    c.metric("Estimated Claim", f"₹ {claim:,.0f}")
+    d.metric("Recommended Plan", plan(score))
+
+    st.success(
+        f"You fall under **{category(score)}** category. "
+        f"Recommended plan: **{plan(score)}**."
+    )
+
+    # Benchmark plot
+    fig = px.scatter(
+        df,
+        x="Age",
+        y="Claim Amount",
+        opacity=0.3,
+        title="Age vs Claim Amount Benchmark"
+    )
+    fig.add_scatter(
+        x=[age],
+        y=[claim],
+        mode="markers",
+        marker=dict(size=14),
+        name="You"
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+# -----------------------------------------
+# FOOTER
+# -----------------------------------------
+st.divider()
+st.caption("© 2026 Smart Fitness Insurance | AI-Driven Wellness Protection")
