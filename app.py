@@ -21,7 +21,7 @@ st.markdown("""
     .insight-box { background-color: #e3f2fd; padding: 20px; border-radius: 10px; border-left: 5px solid #2196f3; margin-bottom: 20px; }
     h1, h2, h3 { color: #2c3e50; }
     </style>
-""", unsafe_allow_stdio=True)
+""", unsafe_allow_html=True) # ✅ Fixed!
 
 # --- DATA LOADING & PREPROCESSING ---
 @st.cache_data
