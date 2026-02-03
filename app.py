@@ -16,7 +16,7 @@ st.set_page_config(page_title="Insurance Recommendation System", layout="wide", 
 # --- CUSTOM CSS ---
 st.markdown("""
     <style>
-    .main { background-color: #f8f9fa; }
+    .main { background-color: #2996c4; }
     .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .insight-box { background-color: #174d48; padding: 20px; border-radius: 10px; border-left: 5px solid #2196f3; margin-bottom: 20px; }
     h1, h2, h3 { color: #2c3e50; }
