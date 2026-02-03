@@ -109,7 +109,18 @@ if df is not None:
     tab1, tab2, tab3 = st.tabs(["📊 Visual Analytics", "💼 Business Insights", "🔍 Model Performance"])
 
     with tab1:
-       # --- FIX 1: Visualization 1 Insights ---
+# --- VISUALIZATION 1 ---
+        st.subheader("📊 VISUALIZATION 1: INCOME-AGE RELATIONSHIP WITH POLICY SEGMENTATION")
+        fig1 = px.scatter(df, x="age_in_years", y="Income", color="policy", 
+                         size="premium", hover_data=['occupation'],
+                         title="Age vs Income by Policy Type",
+                         color_discrete_sequence=px.colors.qualitative.Pastel)
+        st.plotly_chart(fig1, use_container_width=True)
+        
+        # 1. ADD THIS LINE (The calculation):
+        income_age_corr = df['Income'].corr(df['age_in_years'])
+        
+        # 2. THEN CALL THE MARKDOWN:
         st.markdown(f"""
         <div class="insight-box">
         <b>🔍 INCOME-AGE RELATIONSHIP INSIGHTS:</b><br>
@@ -118,38 +129,9 @@ if df is not None:
         • <b>StarLite:</b> Avg Age {df[df['policy']=='StarLite']['age_in_years'].mean():.1f}y, Avg Income ₹{df[df['policy']=='StarLite']['Income'].mean():,.0f}<br>
         • <b>Maxbupa:</b> Avg Age {df[df['policy']=='Maxbupa']['age_in_years'].mean():.1f}y, Avg Income ₹{df[df['policy']=='Maxbupa']['Income'].mean():,.0f}
         </div>
-        """, unsafe_allow_html=True) # Changed stdio to html
+        """, unsafe_allow_html=True)
 
-        # --- FIX 2: Visualization 2 Insights ---
-        st.markdown("""
-        <div class="insight-box">
-        <b>🔍 FEATURE RELATIONSHIP INSIGHTS:</b><br>
-        • Strongest features for segmentation: Income and Premium Amount.<br>
-        • Policy boundaries are clearly defined by Income thresholds (₹50k limit).
-        </div>
-        """, unsafe_allow_html=True) # Changed stdio to html
-
-        # ... (Visualization 3 and 4 code) ...
-
-        # --- FIX 3: Visualization 4 Insights ---
-        st.markdown(f"""
-        <div class="insight-box">
-        <b>🔍 CORRELATION MATRIX INSIGHTS:</b><br>
-        • Income ↔ Premium: {corr.loc['Income', 'premium']:.3f} (Significant positive link)<br>
-        • Age ↔ Premium: {corr.loc['age_in_days', 'premium']:.3f} (Minimal relationship)
-        </div>
-        """, unsafe_allow_html=True) # Changed stdio to html
-
-        # --- FIX 4: Visualization 5 Insights ---
-        st.markdown(f"""
-        <div class="insight-box">
-        <b>🔍 PREMIUM PAYMENT INSIGHTS:</b><br>
-        • Average premiums paid: {df['no_of_premiums_paid'].mean():.1f}<br>
-        • Median premiums paid: {df['no_of_premiums_paid'].median():.1f}<br>
-        • <b>StarLite:</b> Average Premium ₹{df[df['policy']=='StarLite']['premium'].mean():,.0f}
-        </div>
-        """, unsafe_allow_html=True) # Changed stdio to html
-
+        
     with tab2:
         st.header("📊 ADVANCED BUSINESS INSIGHTS")
         
