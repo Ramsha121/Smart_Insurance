@@ -109,16 +109,7 @@ if df is not None:
     tab1, tab2, tab3 = st.tabs(["📊 Visual Analytics", "💼 Business Insights", "🔍 Model Performance"])
 
     with tab1:
-        # VISUALIZATION 1
-        st.subheader("📊 VISUALIZATION 1: INCOME-AGE RELATIONSHIP WITH POLICY SEGMENTATION")
-        fig1 = px.scatter(df, x="age_in_years", y="Income", color="policy", 
-                         size="premium", hover_data=['occupation'],
-                         title="Age vs Income by Policy Type",
-                         color_discrete_sequence=px.colors.qualitative.Pastel)
-        st.plotly_chart(fig1, use_container_width=True)
-        
-        # Personalized Insights 1
-        income_age_corr = df['Income'].corr(df['age_in_years'])
+       # --- FIX 1: Visualization 1 Insights ---
         st.markdown(f"""
         <div class="insight-box">
         <b>🔍 INCOME-AGE RELATIONSHIP INSIGHTS:</b><br>
@@ -127,54 +118,29 @@ if df is not None:
         • <b>StarLite:</b> Avg Age {df[df['policy']=='StarLite']['age_in_years'].mean():.1f}y, Avg Income ₹{df[df['policy']=='StarLite']['Income'].mean():,.0f}<br>
         • <b>Maxbupa:</b> Avg Age {df[df['policy']=='Maxbupa']['age_in_years'].mean():.1f}y, Avg Income ₹{df[df['policy']=='Maxbupa']['Income'].mean():,.0f}
         </div>
-        """, unsafe_allow_stdio=True)
+        """, unsafe_allow_html=True) # Changed stdio to html
 
-        # VISUALIZATION 2
-        st.subheader("📊 VISUALIZATION 2: COMPREHENSIVE FEATURE RELATIONSHIPS")
-        fig2 = px.scatter_matrix(df, dimensions=['age_in_years', 'Income', 'premium', 'no_of_premiums_paid'],
-                                color='policy', title="Multi-Dimensional Feature Matrix")
-        st.plotly_chart(fig2, use_container_width=True)
+        # --- FIX 2: Visualization 2 Insights ---
         st.markdown("""
         <div class="insight-box">
         <b>🔍 FEATURE RELATIONSHIP INSIGHTS:</b><br>
         • Strongest features for segmentation: Income and Premium Amount.<br>
         • Policy boundaries are clearly defined by Income thresholds (₹50k limit).
         </div>
-        """, unsafe_allow_stdio=True)
+        """, unsafe_allow_html=True) # Changed stdio to html
 
-        # VISUALIZATION 3
-        st.subheader("📊 VISUALIZATION 3: INTERACTIVE OCCUPATION HIERARCHY")
-        fig3 = px.sunburst(df, path=['job_type', 'occupation'], values='premium',
-                          color='job_type', color_discrete_map={'White-collar':'#3498db', 'Blue-collar':'#e74c3c'})
-        st.plotly_chart(fig3, use_container_width=True)
-        
-        # Occupation Stats
-        occ_stats = df.groupby('occupation').agg({'Income':'mean', 'premium':'mean', 'policy':lambda x: x.mode()[0]})
-        st.markdown("<b>🔍 OCCUPATION DISTRIBUTION INSIGHTS:</b>", unsafe_allow_stdio=True)
-        st.table(occ_stats.style.format({'Income': '₹{:,.0f}', 'premium': '₹{:,.0f}'}))
+        # ... (Visualization 3 and 4 code) ...
 
-        # VISUALIZATION 4
-        st.subheader("📊 VISUALIZATION 4: ADVANCED CORRELATION MATRIX")
-        numeric_df = df.select_dtypes(include=[np.number])
-        corr = numeric_df.corr()
-        fig4 = go.Figure(data=go.Heatmap(z=corr.values, x=corr.columns, y=corr.columns, 
-                                       colorscale='RdBu_r', zmin=-1, zmax=1))
-        fig4.update_layout(title="Feature Correlation Heatmap")
-        st.plotly_chart(fig4, use_container_width=True)
-        
+        # --- FIX 3: Visualization 4 Insights ---
         st.markdown(f"""
         <div class="insight-box">
         <b>🔍 CORRELATION MATRIX INSIGHTS:</b><br>
         • Income ↔ Premium: {corr.loc['Income', 'premium']:.3f} (Significant positive link)<br>
         • Age ↔ Premium: {corr.loc['age_in_days', 'premium']:.3f} (Minimal relationship)
         </div>
-        """, unsafe_allow_stdio=True)
+        """, unsafe_allow_html=True) # Changed stdio to html
 
-        # VISUALIZATION 5
-        st.subheader("📊 VISUALIZATION 5: COMPREHENSIVE PREMIUM ANALYSIS")
-        fig5 = px.box(df, x="policy", y="premium", color="job_type", points="all",
-                     title="Premium Distribution by Policy and Job Type")
-        st.plotly_chart(fig5, use_container_width=True)
+        # --- FIX 4: Visualization 5 Insights ---
         st.markdown(f"""
         <div class="insight-box">
         <b>🔍 PREMIUM PAYMENT INSIGHTS:</b><br>
@@ -182,7 +148,7 @@ if df is not None:
         • Median premiums paid: {df['no_of_premiums_paid'].median():.1f}<br>
         • <b>StarLite:</b> Average Premium ₹{df[df['policy']=='StarLite']['premium'].mean():,.0f}
         </div>
-        """, unsafe_allow_stdio=True)
+        """, unsafe_allow_html=True) # Changed stdio to html
 
     with tab2:
         st.header("📊 ADVANCED BUSINESS INSIGHTS")
